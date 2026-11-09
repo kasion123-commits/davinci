@@ -146,6 +146,11 @@ body.mt::after{content:"";position:fixed;inset:0;z-index:4;pointer-events:none;b
 /* ---- 공개된 타일은 위로 올림 ---- */
 .pl .hand{padding-top:20px}
 .t.op,#mh .t.op{transform:translateY(-10px) scale(.94)}
+/* ---- 상대 타일은 공개 여부와 관계없이 일직선 정렬 ---- */
+.pl:not(#mh) .hand{padding-top:8px;align-items:center}
+.pl:not(#mh) .t.op{transform:none}
+.t.rv b{animation:rvIn 1s ease-out both;animation-delay:var(--rd,0ms)}
+@keyframes rvIn{0%{opacity:0;filter:blur(7px);transform:scale(.7)}60%{opacity:.8;filter:blur(2px)}100%{opacity:1;filter:blur(0);transform:none}}
 /* ---- 게임 방법 안내 ---- */
 ol.gd{margin:6px 0 4px;padding-left:20px;font-size:14px;line-height:1.55;color:var(--fg)}
 ol.gd li{margin:5px 0}
@@ -313,7 +318,7 @@ const avail=()=>['b','w'].filter(c=>S.dk[c].length);
 const lg=m=>{S.log.push(m);if(S.log.length>6)S.log.shift()};
 function ins(h,t,pos){if(t.v==='J')h.splice(pos,0,t);else{let j=-1;h.forEach((x,i)=>{if(x.v!=='J'&&key(x)<key(t))j=i});h.splice(j+1,0,t)}}
 function turn0(){S.dr=null;S.g=0;S.pl=0;S.ph=avail().length?'draw':'guess';const q=S.P[S.t];S.td=(S.tl&&q&&!q.bot)?Date.now()+S.tl*1000:0}
-function dInit(p,c){if(S.ph!=='setup'||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;ins(p.h,t,Math.floor(R()*(p.h.length+1)));if(S.P.every(q=>q.h.length>=S.N)){S.t=0;lg('게임 시작!');turn0()}}
+function dInit(p,c){if(S.ph!=='setup'||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;ins(p.h,t,Math.floor(R()*(p.h.length+1)));if(S.P.every(q=>q.h.length>=S.N)){S.t=Math.floor(R()*S.P.length);lg('게임 시작! '+S.P[S.t].name+' 먼저');turn0()}}
 function chk(q){if(!q.out&&q.h.every(t=>t.o)){q.out=1;lg(q.name+' 탈락');const al=S.P.filter(p=>!p.out);if(al.length<2){S.ph='over';S.win=al[0].id}}}
 function nxt(){if(S.ph==='over')return;do S.t=(S.t+1)%S.P.length;while(S.P[S.t].out);turn0()}
 function fin(){const c=S.P[S.t];if(!S.dr)return nxt();if(S.dr.v==='J'){S.ph='place';return}S.dr.o=S.pl;ins(c.h,S.dr,0);S.dr=null;chk(c);nxt()}
@@ -550,6 +555,16 @@ const gs=v=>{if(!sel)return;send({t:'guess',i:sel.i,k:sel.k,v});sel=null};
 const q1=(t,x)=>()=>send({t,...x});
 
 function tl(t,x,at){const[c,v,o]=t;return `<div class="t ${c}${o?' op':''}${v===undefined?' hd':''}${v!==undefined&&String(v).length>1&&v!=='J'?' two':''} ${x||''}" ${at||''}><b>${v===undefined?'&nbsp;':vs(v)}</b></div>`}
+/* 상대 타일이 새로 공개될 때 숫자가 서서히 나타나게: 처음 공개된 순간만 기록하고, 재렌더돼도 애니메이션이 이어지게 경과시간만큼 지연을 뺌 */
+let revGid=null,revSeen=new Map(),revInit=true;const REV_MS=1100;
+function revBegin(gid){if(revGid!==gid){revGid=gid;revSeen=new Map();revInit=true}else revInit=false}
+function revTile(i,t){
+  if(!t[2]||t[1]===undefined)return{c:'',a:''};
+  const k=i+':'+t[0]+t[1];let st=revSeen.get(k);
+  if(st===undefined){st=revInit?0:Date.now();revSeen.set(k,st)}
+  const el=st?Date.now()-st:REV_MS;
+  return el<REV_MS?{c:' rv',a:`style="--rd:${-el}ms"`}:{c:'',a:''};
+}
 function cand(i,k){const P=C.s.P,h=P[i].h,tc=h[k][0],kn=new Set(),ky=t=>t[1]*2+(t[0]==='w'?1:0);
   C.me.forEach(t=>kn.add(t[0]+t[1]));if(C.dr)kn.add(C.dr[0]+C.dr[1]);P.forEach(p=>p.h.forEach(t=>t[2]&&kn.add(t[0]+t[1])));
   let lo=-1,hi=99;
@@ -602,7 +617,7 @@ function render(){
     ${host?`<div class="row lbb"><button class="s" onclick="send({t:'bot'})" ${P.length>=4?'disabled':''}>＋ AI 추가</button><button class="go2" onclick="send({t:'start'})" ${P.length<2?'disabled':''}>게임 시작</button></div>${P.length<2?'<p class="m" style="text-align:center;margin:2px 0 0">2명 이상 모이면 시작할 수 있어요</p>':P.length>1?'<p class="m" style="text-align:center;margin:2px 0 0">참가자를 왼쪽으로 밀면 내보낼 수 있어요</p>':''}`:'<p class="m" style="text-align:center">방장이 시작하길 기다리는 중…</p>'}
     <p style="text-align:center;margin:14px 0 0"><button class="lv" onclick="leave()">나가기</button></p>`;return}
   const pick=(k,t)=>ph==='pen'&&my&&!t[2]?`onclick="send({t:'pen',k:${k}})"`:'';
-  const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span><b class="pav${i===s.t&&!p.out?' on':''}" data-i="${esc([...p.n][0]||'?')}"><i>${esc([...p.n][0]||'?')}</i></b>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.out?'탈락':'','숨은 타일 '+p.h.filter(t=>!t[2]).length+'장'].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>tl(t,sel&&sel.i===i&&sel.k===k?'sel':'',my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')).join('')}</div></div>`).join('');
+  revBegin(s.gid);const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span><b class="pav${i===s.t&&!p.out?' on':''}" data-i="${esc([...p.n][0]||'?')}"><i>${esc([...p.n][0]||'?')}</i></b>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.out?'탈락':'','숨은 타일 '+p.h.filter(t=>!t[2]).length+'장'].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>{const rv=revTile(i,t);return tl(t,(sel&&sel.i===i&&sel.k===k?'sel':'')+rv.c,(my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')+' '+rv.a)}).join('')}</div></div>`).join('');
   let mine='';
   C.me.forEach((t,k)=>{if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${k}})"></button>`;mine+=tl(t,t[2]?'':'mine',pick(k,t))});
   if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${C.me.length}})"></button>`;
