@@ -162,6 +162,7 @@ button.kk{background:#fee500;color:#191919;border-color:#e6cf00;font-weight:700}
 <script>
 const $=s=>document.querySelector(s),R=Math.random,esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let RM=null,rm=null,isHost=false,joining=false,S=null,C=null,sel=null,botT=0,code='';
+const LINK_R=(()=>{try{const r=(new URLSearchParams(location.search).get('r')||'').toLowerCase();return /^[a-z0-9]{4}$/.test(r)?r:''}catch(e){return ''}})();
 const me={id:Math.random().toString(36).slice(2,9),name:''};
 const key=t=>t.v==='J'?-1:t.v*2+(t.c==='w'?1:0);
 const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -253,16 +254,49 @@ const turnMine=c=>{if(!c)return false;const s=c.s,q=s.P[s.t];return !!q&&q.id===
 function yourTurn(){const b=document.createElement('div');b.className='myturn';b.textContent='내 차례!';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);
   try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(_){}BGM.ding()}
 function recv(m){if(!m||m.to!==me.id)return;if(m.kick){C=null;joining=false;sel=null;render();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);C=m;render();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
+const genCode=()=>Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
+const PJS='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+const loadPeer=()=>new Promise((ok,no)=>{if(window.Peer)return ok();const x=document.createElement('script');x.src=PJS;x.onload=ok;x.onerror=()=>no(new Error('peerjs'));document.head.appendChild(x)});
+const PCFG={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]};
+async function pHost(cd){
+  await loadPeer();
+  return new Promise((ok,no)=>{
+    const p=new Peer('dv-'+cd,{config:PCFG}),conns=[],h={};
+    p.on('open',()=>ok({emit:(t,d)=>{const m=JSON.stringify([t,d]);conns.forEach(c=>{try{if(c.open)c.send(m)}catch(_){}});return Promise.resolve()},on:(t,f)=>{h[t]=f;return()=>{}}}));
+    p.on('connection',c=>{
+      c.on('open',()=>{conns.push(c)});
+      c.on('data',e=>{try{const[t,d]=JSON.parse(e);h[t]&&h[t]({data:d})}catch(_){}});
+      c.on('close',()=>{const i=conns.indexOf(c);if(i>=0)conns.splice(i,1)})});
+    p.on('error',e=>no(e));
+    setTimeout(()=>no(new Error('timeout')),15000)})}
+async function pJoin(cd){
+  await loadPeer();
+  return new Promise((ok,no)=>{
+    const p=new Peer({config:PCFG}),h={};
+    p.on('open',()=>{
+      const c=p.connect('dv-'+cd,{reliable:true});
+      c.on('open',()=>ok({emit:(t,d)=>{try{c.send(JSON.stringify([t,d]))}catch(_){}return Promise.resolve()},on:(t,f)=>{h[t]=f;return()=>{}}}));
+      c.on('data',e=>{try{const[t,d]=JSON.parse(e);h[t]&&h[t]({data:d})}catch(_){}});
+      c.on('error',no)});
+    p.on('error',no);
+    setTimeout(()=>no(new Error('timeout')),15000)})}
 async function mk(){
-  me.name=($('#nm').value||'').trim().slice(0,10)||'나';code=Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');isHost=true;
+  me.name=($('#nm').value||'').trim().slice(0,10)||'나';code=genCode();isHost=true;
   S={ph:'lobby',P:[{id:me.id,name:me.name,h:[],out:0}],dk:{b:[],w:[]},t:0,dr:null,g:0,pl:0,N:4,log:[],win:null};
+  joining=true;render();
   if(RM){try{rm=await RM.join('dv-'+code);rm.on('act',m=>act(m.data))}catch(e){rm=null}}
-  setInterval(bc,5000);bc()}
+  else{
+    for(let n=0;n<4&&!rm;n++){
+      try{rm=await pHost(code);rm.on('act',m=>act(m.data))}
+      catch(e){rm=null;if(e&&e.type==='unavailable-id'){code=genCode();continue}break}}
+    if(!rm)alert('방 서버에 연결하지 못했어요. 지금은 AI 대전만 가능해요. 잠시 뒤 다시 시도해 주세요.')}
+  joining=false;setInterval(bc,5000);bc()}
 async function jn(){
   me.name=($('#nm').value||'').trim().slice(0,10)||'손님';code=($('#cd').value||'').trim().toLowerCase();
-  if(!RM||!/^[a-z0-9]{4}$/.test(code)){alert(RM?'방 코드는 4자리예요.':'이 환경에서는 방에 참가할 수 없어요.');return}
+  if(!/^[a-z0-9]{4}$/.test(code)){alert('방 코드는 4자리예요.');return}
   joining=true;render();
-  try{rm=await RM.join('dv-'+code);rm.on('st',m=>recv(m.data))}catch(e){joining=false;alert('방에 연결하지 못했어요.');render();return}
+  try{rm=RM?await RM.join('dv-'+code):await pJoin(code);rm.on('st',m=>recv(m.data))}
+  catch(e){joining=false;alert('방에 연결하지 못했어요. 방장이 방을 만들었는지, 코드가 맞는지 확인해 주세요.');render();return}
   const ping=setInterval(()=>{if(C)return clearInterval(ping);send({t:'join',name:me.name})},1800);send({t:'join',name:me.name})}
 const sl=(i,k)=>{sel={i,k};render()};
 const pk=(c,i)=>{BGM.tap();if(i!==undefined)lt[c]=i;send({t:C.s.ph==='setup'?'init':'draw',c})};
@@ -300,8 +334,8 @@ function home(){
   ${joining?'<p class="big">연결 중…</p>':`<div class="entry"><input id="nm" placeholder="내 이름" maxlength="10" value="${esc(me.name)}">
   <button class="go" onclick="mk()">방 만들기</button>
   <div class="or">또는 방 코드로 참가</div>
-  <div class="row"><input id="cd" placeholder="방 코드" maxlength="4"><button onclick="jn()">참가</button></div>
-  <p class="m" style="margin:12px 0 0">${RM===null?'방 연결을 확인하는 중이거나 사용할 수 없어요. 이 경우 AI 대전만 가능해요.':'방을 만든 뒤 코드를 친구에게 알려주세요. 혼자서는 AI를 추가해 플레이해요.'}</p></div>
+  <div class="row"><input id="cd" placeholder="방 코드" maxlength="4" value="${esc(LINK_R)}"><button onclick="jn()">참가</button></div>
+  <p class="m" style="margin:12px 0 0">${LINK_R?'초대받은 방 코드가 입력됐어요. 이름을 쓰고 참가를 눌러요.':'방을 만든 뒤 초대 링크를 친구에게 보내세요. 혼자서는 AI를 추가해 플레이해요.'}</p></div>
   <div class="row lnk"><button class="s" onclick="cpUrl()">게임 링크 복사</button><button class="s kk" onclick="kkUrl()">링크 공유</button></div>
   <details class="dc"><summary>게임 방법</summary><ol class="gd">
 <li><b>타일</b> 흑·백 각각 0~11과 조커(–) 한 장씩이에요. 내 타일은 나만 볼 수 있고 숫자 순서로 자동 정렬돼요. 같은 숫자면 흑이 왼쪽, 백이 오른쪽이고 조커는 내가 원하는 자리에 놓아요.</li>
@@ -310,14 +344,16 @@ function home(){
 <li><b>맞히면</b> 그 타일이 공개돼요. 이어서 추리하거나 "그만하고 타일 놓기"로 뽑은 타일을 숨긴 채 내 패에 넣어요.</li>
 <li><b>틀리면</b> 방금 뽑은 타일이 공개된 채로 내 패에 들어가고 차례가 끝나요. 뽑을 타일이 없으면 내 숨은 타일 하나를 공개해요.</li>
 <li><b>승리</b> 숨은 타일이 모두 공개되면 탈락해요. 끝까지 남은 한 사람이 이겨요.</li></ol></details>
-  <details class="dc"><summary>클로드 앱 없는 친구와 멀티하기</summary>
-  <p class="m">방 코드는 클로드 앱 안에서만 동작해요. 앱이 없는 친구와는 폰 2대로 직접 연결해요. (2명 + AI 추가 가능)</p>
+  <details class="dc"><summary>친구와 멀티하기 (앱 없어도 돼요)</summary>
+  <p class="m">2~4명이 함께 할 수 있어요.</p>
   <ol class="gd">
-<li>위의 "게임 링크 복사"로 주소를 친구에게 보내서 폰 브라우저(크롬·사파리)로 열게 해요.</li>
-<li><b>나</b>: 아래 "방 만들기"를 눌러 나온 코드를 복사해 친구에게 메신저로 보내요.</li>
-<li><b>친구</b>: 아래 "참가"를 눌러 받은 코드를 붙여넣고 "응답 코드 만들기"를 눌러요. 나온 응답 코드를 복사해 나에게 보내요.</li>
-<li><b>나</b>: 응답 코드를 붙여넣고 "연결"을 누르면 대기실로 이동해요.</li></ol>
-  <p class="m">연결이 끝날 때까지 두 사람 모두 화면을 닫지 마세요. 안 되면 같은 와이파이에서 다시 시도해 보세요.</p>
+<li>이름을 쓰고 <b>방 만들기</b>를 눌러요.</li>
+<li>대기실에서 <b>카톡으로 보내기</b>로 초대 링크를 보내요.</li>
+<li>친구가 링크를 열면 방 코드가 자동으로 들어가요. 이름을 쓰고 <b>참가</b>만 누르면 돼요.</li>
+<li>모두 모이면 방장이 <b>게임 시작</b>을 눌러요.</li></ol>
+  <p class="m">연결이 안 되면 같은 와이파이에서 다시 해 보거나 아래 "직접 연결"을 써 보세요.</p></details>
+  <details class="dc"><summary>직접 연결 (방 만들기가 안 될 때)</summary>
+  <p class="m">서버 없이 코드를 주고받는 방식이에요. 2명만 가능하고 코드를 두 번 주고받아야 해요.</p>
   <div class="row"><button class="s" onclick="dh()">방 만들기</button><button class="s" onclick="dgs()">참가</button></div></details>`}`}
 function render(){
   if(introRun){pendR=1;return}
@@ -330,7 +366,7 @@ function render(){
       const row=`<div class="seat"><b class="av">${esc([...q.n][0]||'?')}</b><span>${esc(q.n)}${q.id===me.id?' (나)':''}</span><em>${[q.bot?'AI':'',i===0?'방장':''].filter(Boolean).join(' · ')}</em></div>`;
       return host&&i>0?`<div class="sw${swOpen===q.id?' open':''}" data-id="${esc(q.id)}"><button class="del" data-id="${esc(q.id)}" onclick="send({t:'kick',id:this.dataset.id})">삭제</button>${row}</div>`:row}).join('');
     a.innerHTML=`<div class="hero lb"><p>방 코드</p><div class="tiles">${cd}</div><p style="margin-top:14px">친구에게 코드를 알려주세요 · ${P.length}/4명</p></div>
-    ${host&&code!=='직접'?`<div class="row lbb"><button class="s" onclick="cpRoom()">코드 복사</button><button class="s kk" onclick="kkRoom()">공유하기 (카톡 등)</button></div>`:''}
+    ${host&&code!=='직접'?`<div class="row lbb"><button class="s" onclick="cpRoom()">${RM?'코드 복사':'링크 복사'}</button><button class="s kk" onclick="kkRoom()">공유하기 (카톡 등)</button></div>`:''}
     <div class="seats">${seats}</div>
     ${host?`<div class="row lbb"><button class="s" onclick="send({t:'bot'})" ${P.length>=4?'disabled':''}>AI 추가</button><button onclick="send({t:'start'})" ${P.length<2?'disabled':''}>게임 시작</button></div>`:'<p class="m" style="text-align:center">방장이 시작하길 기다리는 중…</p>'}
     <p class="m" style="text-align:center">2~4명까지 참여할 수 있어요.${host&&P.length>1?' 참가자를 왼쪽으로 밀면 삭제할 수 있어요.':''}</p>`;return}
@@ -400,8 +436,9 @@ const gameUrl=()=>GAME_URL||(/^https?:/.test(location.href)?location.href.split(
 const cpUrl=async()=>{const u=gameUrl();if(!u){alert('이 화면에는 복사할 수 있는 게임 주소가 없어요.');return}alert(await cpt(u)?'게임 링크를 복사했어요.':'복사하지 못했어요.\n'+u)};
 const kkUrl=()=>{const u=gameUrl();if(!u){alert('이 화면에는 공유할 수 있는 게임 주소가 없어요.');return}kk(u)};
 const kkOut=()=>kk($('#out').value);
-const kkRoom=()=>kk('다빈치 코드 같이 해요! 방 코드: '+code.toUpperCase());
-const cpRoom=async()=>{alert(await cpt(code.toUpperCase())?'방 코드를 복사했어요.':'복사하지 못했어요.')};
+const inviteUrl=()=>{const b=GAME_URL||(/^https?:/.test(location.protocol)?location.origin+location.pathname:'');return b?b+'?r='+code:''};
+const kkRoom=()=>{const u=!RM&&inviteUrl();kk(u?'다빈치 코드 같이 해요! 링크를 누르면 방 코드가 자동으로 입력돼요.\n'+u:'다빈치 코드 같이 해요! 방 코드: '+code.toUpperCase())};
+const cpRoom=async()=>{const u=!RM&&inviteUrl();alert(await cpt(u||code.toUpperCase())?(u?'초대 링크를 복사했어요.':'방 코드를 복사했어요.'):'복사하지 못했어요.')};
 function cpanel(){const c=conn,cp='<div class="row"><button class="s" onclick="cpy()">복사</button><button class="s kk" onclick="kkOut()">공유하기 (카톡 등)</button></div>',bk='<button class="s" onclick="conn=null;isHost=false;render()">뒤로</button>';
   if(c.m==='h')return `<h1>직접 연결 · 방 만들기</h1>${c.err?`<p class="m">${c.err}</p>`:c.busy?'<p class="m">코드 만드는 중…</p>':`<p class="m">① 아래 코드를 복사해 친구에게 보내세요</p><textarea id="out" readonly>${c.out}</textarea>${cp}<p class="m">② 친구가 돌려준 응답 코드를 붙여넣고 연결을 누르세요</p><textarea id="ans"></textarea><button onclick="dhc()">연결</button>`}${bk}`;
   return `<h1>직접 연결 · 참가</h1><p class="m">① 방장이 보낸 코드를 붙여넣으세요</p><textarea id="off"></textarea><button onclick="dgo()">응답 코드 만들기</button>${c.out?`<p class="m">② 아래 응답 코드를 방장에게 보내세요. 방장이 연결하면 자동으로 시작돼요.</p><textarea id="out" readonly>${c.out}</textarea>${cp}`:''}${bk}`}
