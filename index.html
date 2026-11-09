@@ -318,7 +318,8 @@ const avail=()=>['b','w'].filter(c=>S.dk[c].length);
 const lg=m=>{S.log.push(m);if(S.log.length>6)S.log.shift()};
 function ins(h,t,pos){if(t.v==='J')h.splice(pos,0,t);else{let j=-1;h.forEach((x,i)=>{if(x.v!=='J'&&key(x)<key(t))j=i});h.splice(j+1,0,t)}}
 function turn0(){S.dr=null;S.g=0;S.pl=0;S.ph=avail().length?'draw':'guess';const q=S.P[S.t];S.td=(S.tl&&q&&!q.bot)?Date.now()+S.tl*1000:0}
-function dInit(p,c){if(S.ph!=='setup'||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;ins(p.h,t,Math.floor(R()*(p.h.length+1)));if(S.P.every(q=>q.h.length>=S.N)){S.t=Math.floor(R()*S.P.length);lg('게임 시작! '+S.P[S.t].name+' 먼저');turn0()}}
+function setupChk(){if(S.P.every(q=>q.h.length>=S.N&&!q.jp)){S.t=Math.floor(R()*S.P.length);lg('게임 시작! '+S.P[S.t].name+' 먼저');turn0()}}
+function dInit(p,c){if(S.ph!=='setup'||p.jp||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;if(t.v==='J'&&!p.bot&&p.h.length>0){p.jp=t;return}ins(p.h,t,Math.floor(R()*(p.h.length+1)));setupChk()}
 function chk(q){if(!q.out&&q.h.every(t=>t.o)){q.out=1;lg(q.name+' 탈락');const al=S.P.filter(p=>!p.out);if(al.length<2){S.ph='over';S.win=al[0].id}}}
 function nxt(){if(S.ph==='over')return;do S.t=(S.t+1)%S.P.length;while(S.P[S.t].out);turn0()}
 function fin(){const c=S.P[S.t];if(!S.dr)return nxt();if(S.dr.v==='J'){S.ph='place';return}S.dr.o=S.pl;ins(c.h,S.dr,0);S.dr=null;chk(c);nxt()}
@@ -332,7 +333,7 @@ function act(a){
     S.gid=(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
     S.N=S.P.length>3?3:4;const d={b:[],w:[]};
     for(const k of 'bw'){for(let v=0;v<12;v++)d[k].push({c:k,v,o:0});d[k].push({c:k,v:'J',o:0});sh(d[k])}
-    S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0});
+    S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0});
     S.P.filter(x=>x.bot).forEach(b=>{for(let n=0;n<S.N;n++){const av=avail();dInit(b,av[Math.floor(R()*av.length)])}})}
   else if(a.t==='kick'&&S.ph==='lobby'&&p===host){const q=S.P.find(x=>x.id===a.id);if(!q||q===host)return;S.P=S.P.filter(x=>x!==q);if(!q.bot&&rm)Promise.resolve(rm.emit('st',{to:q.id,kick:1})).catch(()=>{})}
   else if(a.t==='pause'){if(S.pz||p.bot||['lobby','over'].includes(S.ph))return;S.pz=p.id;S.pzd=Date.now()+60000;S.tdr=S.td?Math.max(0,S.td-Date.now()):null;lg(p.name+' 일시정지 (최대 60초)')}
@@ -343,12 +344,13 @@ function act(a){
   else if(a.t==='leave'&&p!==host){
     if(S.pz===p.id)unpause();
     if(S.ph==='lobby'||S.ph==='over')S.P=S.P.filter(x=>x!==p);
-    else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0})}
+    else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0})}
     else{const wasCur=c===p;p.out=1;p.h.forEach(t=>{t.o=1});lg(p.name+' 나감');
       const al=S.P.filter(x=>!x.out);
       if(al.length<2){S.ph='over';S.win=al[0]?al[0].id:null;S.dr=null}
       else if(wasCur){S.dr=null;nxt()}}}
   else if(a.t==='init')dInit(p,a.c);
+  else if(a.t==='jplace'&&S.ph==='setup'&&p.jp){ins(p.h,p.jp,Math.max(0,Math.min(p.h.length,a.pos|0)));p.jp=null;setupChk()}
   else if(a.t==='draw'&&S.ph==='draw'&&p===c&&S.dk[a.c]&&S.dk[a.c].length){S.dr=S.dk[a.c].pop();S.dr.o=0;S.ph='guess';S.g=0}
   else if(a.t==='guess'&&S.ph==='guess'&&p===c){
     const q=S.P[a.i],t=q&&q.h[a.k];if(!q||q===c||q.out||!t||t.o)return;
@@ -357,7 +359,7 @@ function act(a){
   else if(a.t==='stop'&&S.ph==='guess'&&p===c&&S.g){S.pl=0;fin()}
   else if(a.t==='place'&&S.ph==='place'&&p===c){S.dr.o=S.pl;ins(c.h,S.dr,Math.max(0,Math.min(c.h.length,a.pos|0)));S.dr=null;chk(c);nxt()}
   else if(a.t==='pen'&&S.ph==='pen'&&p===c){const t=c.h[a.k];if(!t||t.o)return;t.o=1;chk(c);nxt()}
-  else if(a.t==='again'&&S.ph==='over'&&p===host){S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0})}
+  else if(a.t==='again'&&S.ph==='over'&&p===host){S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0})}
   else return;
   if(S.ph==='lobby'||S.ph==='over'){if(S.pz)unpause();S.td=0}
   bc();sched()}
@@ -366,7 +368,7 @@ function bc(){
   const pub={gid:S.gid||'',ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],pz:(S.ph==='lobby'||S.ph==='over')?null:(S.pz||null),tl:S.tl|0,lg:S.lg===0?0:1,tr:S.pz?(S.tdr!=null?S.tdr:-1):((S.td&&['draw','guess','place','pen'].includes(S.ph))?Math.max(0,S.td-Date.now()):-1),pr:S.pz?Math.max(0,(S.pzd||0)-Date.now()):0,dk:{b:S.dk.b.length,w:S.dk.w.length},
     P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
   S.P.forEach(p=>{if(p.bot)return;
-    const m={to:p.id,s:(S.ph==='place'&&S.P[S.t]!==p)?Object.assign({},pub,{ph:'guess'}):pub,me:p.h.map(t=>[t.c,t.v,t.o]),dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
+    const m={to:p.id,s:(S.ph==='place'&&S.P[S.t]!==p)?Object.assign({},pub,{ph:'guess'}):pub,me:p.h.map(t=>[t.c,t.v,t.o]),jp:p.jp?1:0,dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
     if(p.id===me.id)recv(m);else if(rm)rm.emit('st',m).catch(()=>{})});
   saveSess()}
 function sched(){
@@ -619,13 +621,14 @@ function render(){
   const pick=(k,t)=>ph==='pen'&&my&&!t[2]?`onclick="send({t:'pen',k:${k}})"`:'';
   revBegin(s.gid);const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span><b class="pav${i===s.t&&!p.out?' on':''}" data-i="${esc([...p.n][0]||'?')}"><i>${esc([...p.n][0]||'?')}</i></b>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.out?'탈락':'','숨은 타일 '+p.h.filter(t=>!t[2]).length+'장'].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>{const rv=revTile(i,t);return tl(t,(sel&&sel.i===i&&sel.k===k?'sel':'')+rv.c,(my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')+' '+rv.a)}).join('')}</div></div>`).join('');
   let mine='';
-  C.me.forEach((t,k)=>{if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${k}})"></button>`;mine+=tl(t,t[2]?'':'mine',pick(k,t))});
+  const sj=ph==='setup'&&C.jp;C.me.forEach((t,k)=>{if(sj)mine+=`<button class="sl" onclick="send({t:'jplace',pos:${k}})"></button>`;if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${k}})"></button>`;mine+=tl(t,t[2]?'':'mine',pick(k,t))});
+  if(sj)mine+=`<button class="sl" onclick="send({t:'jplace',pos:${C.me.length}})"></button>`;
   if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${C.me.length}})"></button>`;
   let act_='';
-  syncSl();const cp=(ph==='setup'&&C.me.length<s.N)||(ph==='draw'&&my);
+  syncSl();const cp=(ph==='setup'&&C.me.length<s.N&&!C.jp)||(ph==='draw'&&my);
   const pool=!cp?'':`<div class="tbl">${['b','w'].map((c,side)=>SL[c].map(i=>{const p=PERM[i%15],col=p%3,row=(p-col)/3,r1=rnd(i*7+side*3+1),r2=rnd(i*5+side*11+2),r3=rnd(i*3+side*13+3);const x=side*50+7+(col+.5)/3*36+(r1-.5)*4,y=14+(row+.5)/5*72+(r2-.5)*6;return `<div class="pt ${c}${cp?' go':''}" style="--n:${i+side*13};left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;transform:translate(-50%,-50%) rotate(${Math.round((r3-.5)*90)}deg)" data-c="${c}" data-i="${i}"></div>`}).join('')).join('')}</div>`;
   let hint='',dock='',end='';
-  if(ph==='setup')hint=C.me.length<s.N?`가운데 타일을 끌어오거나 눌러 ${s.N}개를 뽑아요 (${C.me.length}/${s.N})`:'다른 플레이어를 기다리는 중…';
+  if(ph==='setup')hint=C.jp?'조커(–)가 나왔어요! 놓을 위치를 눌러요':C.me.length<s.N?`가운데 타일을 끌어오거나 눌러 ${s.N}개를 뽑아요 (${C.me.length}/${s.N})`:'다른 플레이어를 기다리는 중…';
   else if(ph==='draw')hint=my?'가운데 타일을 끌어오거나 눌러서 뽑으세요':'타일을 고르는 중…';
   else if(ph==='guess'){
     if(my){const tc=sel?P[sel.i].h[sel.k][0]:'b';
