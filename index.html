@@ -361,7 +361,7 @@ function bc(){
   const pub={gid:S.gid||'',ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],pz:(S.ph==='lobby'||S.ph==='over')?null:(S.pz||null),tl:S.tl|0,lg:S.lg===0?0:1,tr:S.pz?(S.tdr!=null?S.tdr:-1):((S.td&&['draw','guess','place','pen'].includes(S.ph))?Math.max(0,S.td-Date.now()):-1),pr:S.pz?Math.max(0,(S.pzd||0)-Date.now()):0,dk:{b:S.dk.b.length,w:S.dk.w.length},
     P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
   S.P.forEach(p=>{if(p.bot)return;
-    const m={to:p.id,s:pub,me:p.h.map(t=>[t.c,t.v,t.o]),dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
+    const m={to:p.id,s:(S.ph==='place'&&S.P[S.t]!==p)?Object.assign({},pub,{ph:'guess'}):pub,me:p.h.map(t=>[t.c,t.v,t.o]),dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
     if(p.id===me.id)recv(m);else if(rm)rm.emit('st',m).catch(()=>{})});
   saveSess()}
 function sched(){
@@ -701,7 +701,7 @@ function confetti(){const w=document.createElement('div');w.className='cf';
   for(let i=0;i<40;i++){const e=document.createElement('i');e.style.cssText=`left:${Math.random()*100}%;background:hsl(${Math.random()*360} 75% 55%);animation-delay:${Math.random()*.6}s;animation-duration:${1.6+Math.random()*1.4}s;--x:${(Math.random()-.5)*120}px;--r:${Math.round(Math.random()*720)}deg`;w.appendChild(e)}
   document.body.appendChild(w);setTimeout(()=>w.remove(),3800)}
 /* 클릭 가능한 타일에 키보드/스크린리더 접근성 부여 */
-(()=>{const r0=render;render=function(){r0.apply(this,arguments);try{if(C&&C.s&&C.s.ph==='over'){if(!cfOn){cfOn=1;if(C.s.win===me.id){confetti();fireworks();winSfx()}else rain()}}else{cfOn=0;stopRain();stopLoseSfx()};document.querySelectorAll('.t[onclick]').forEach(e=>{e.setAttribute('role','button');e.tabIndex=0;if(!e.getAttribute('aria-label')){const b=e.querySelector('b'),v=b?b.textContent.trim():'';e.setAttribute('aria-label',(e.classList.contains('b')?'흑 ':'백 ')+(v||'숨은 타일'))}});
+(()=>{const r0=render;render=function(){r0.apply(this,arguments);try{if(C&&C.s&&C.s.ph==='over'){if(!cfOn){cfOn=1;setTimeout(()=>{const w=document.querySelector('.win');if(w)w.scrollIntoView({block:'center',behavior:'smooth'})},250);if(C.s.win===me.id){confetti();fireworks();winSfx()}else rain()}}else{cfOn=0;stopRain();stopLoseSfx()};document.querySelectorAll('.t[onclick]').forEach(e=>{e.setAttribute('role','button');e.tabIndex=0;if(!e.getAttribute('aria-label')){const b=e.querySelector('b'),v=b?b.textContent.trim():'';e.setAttribute('aria-label',(e.classList.contains('b')?'흑 ':'백 ')+(v||'숨은 타일'))}});
   document.querySelectorAll('.tbl .pt.go').forEach(e=>e.setAttribute('aria-label',(e.dataset.c==='b'?'흑':'백')+' 타일 뽑기'))}catch(_){}}})();
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.t[role=button]')){e.preventDefault();e.target.click()}});
 render();
