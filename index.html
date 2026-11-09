@@ -159,17 +159,28 @@ button.kk{background:#fee500;color:#191919;border-color:#e6cf00;font-weight:700}
 .lnk{margin:12px 0 0;gap:8px}.lnk button{flex:1;margin:0}
 #cbtn{display:none;position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 14px);right:calc(max(18px,calc((100vw - 600px)/2 + 20px)) + 46px);width:36px;height:36px;padding:0;margin:0;border-radius:50%;align-items:center;justify-content:center;font-size:17px;background:var(--card);color:var(--fg);border:1px solid var(--line)}
 #cbd{display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:var(--acc);color:#fff;font:700 11px/17px system-ui,sans-serif;font-style:normal;text-align:center;padding:0 4px;box-sizing:border-box}
-#cpn{display:none;position:fixed;z-index:60;left:0;right:0;top:0;margin:0 auto;max-width:560px;height:min(44vh,340px);flex-direction:column;background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 16px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 10px;box-sizing:border-box}
-#cpn .chh{display:flex;justify-content:space-between;align-items:center}#cpn .chh button{margin:0;padding:6px 12px}
-#clist{flex:1;overflow-y:auto;margin:6px 0;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
-.cm{align-self:flex-start;max-width:82%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;word-break:break-word}
-.cm small{display:block;color:var(--mut);font-size:11px}.cm.me{align-self:flex-end;background:var(--acc);color:#fff;border-color:transparent}.cm.me small{color:rgba(255,255,255,.8)}
+#cpn{display:none;position:fixed;z-index:60;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;height:min(26vh,190px);flex-direction:column;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.3);padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 8px);box-sizing:border-box}
+#cfeed{position:fixed;z-index:55;left:10px;top:calc(env(safe-area-inset-top,0px) + 66px);max-width:72vw;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+#cfeed div{align-self:flex-start;max-width:100%;padding:4px 10px;border-radius:12px;background:color-mix(in srgb,var(--card) 88%,transparent);color:var(--fg);border:1px solid var(--line);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:cf 4.5s ease forwards}
+@keyframes cf{0%{opacity:0;transform:translateY(-4px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+#cpn .chh{display:flex;justify-content:space-between;align-items:center;font-size:16px}#cpn .chh button{margin:0;padding:6px 14px}
+#clist{flex:1;overflow-y:auto;margin:0 0 6px;display:flex;flex-direction:column;gap:7px;-webkit-overflow-scrolling:touch}
+.cm{align-self:flex-start;max-width:80%;background:var(--bg);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:6px 11px;font-size:14px;line-height:1.35;word-break:break-word}
+.cm small{display:block;color:var(--mut);font-size:12px;margin-bottom:1px}.cm.me{align-self:flex-end;background:var(--acc);color:#fff;border-color:transparent;border-radius:16px 16px 4px 16px}.cm.me small{display:none}
 #cpn .chr{gap:6px}#cpn .chr input{margin:0}#cpn .chr button{margin:0;flex:none}
 .bn{padding-right:96px!important}
+.pzo{position:fixed;inset:0;z-index:28;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:20px}
+.pzc{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:320px;width:100%;text-align:center;box-shadow:0 12px 34px rgba(0,0,0,.45)}
+.pzc h2{font:400 26px/1.2 "Black Han Sans","Apple SD Gothic Neo",sans-serif;margin:0 0 8px}.pzc p{margin:0 0 14px;line-height:1.5}.pzc button{margin:4px 0 0}
+.tlb{margin:10px 0;text-align:center}.tlb .row{gap:6px}.tlb .row button{flex:1;margin:0;padding:10px 4px}.tlb b{font-size:16px}
+button.s.on{background:var(--acc);color:#fff;border-color:transparent}
+.tmr{text-align:center;font:400 22px/1.2 "Black Han Sans","Apple SD Gothic Neo",sans-serif;margin:2px 0 4px}.tmr:empty{display:none}.tmr.hot{color:var(--acc);animation:tmh .6s ease-in-out infinite alternate}
+@keyframes tmh{to{transform:scale(1.12)}}
 </style></head>
 <body><div id="app"></div>
 <button id="cbtn" aria-label="채팅" onclick="chatToggle()">💬<i id="cbd"></i></button>
-<div id="cpn"><div class="chh"><b>채팅</b><button class="s" onclick="chatToggle()">닫기</button></div><div id="clist"></div><div class="row chr"><input id="cin" maxlength="100" placeholder="메시지 입력" enterkeyhint="send" autocomplete="off"><button onclick="chatSend()">보내기</button></div></div><button id="bgm" aria-label="음악 켜기/끄기"></button>
+<div id="cfeed"></div>
+<div id="cpn"><div id="clist"></div><div class="row chr"><input id="cin" maxlength="100" placeholder="메시지 입력" enterkeyhint="send" autocomplete="off"><button onclick="chatSend()">보내기</button><button class="s" onclick="chatToggle()">✕</button></div></div><button id="bgm" aria-label="음악 켜기/끄기"></button>
 <script>
 const $=s=>document.querySelector(s),R=Math.random,esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let RM=null,rm=null,isHost=false,joining=false,S=null,C=null,sel=null,botT=0,code='';
@@ -203,13 +214,14 @@ function syncSl(){for(const c of 'bw'){const n=C.s.dk[c],a=SL[c];if(n>a.length){
 const avail=()=>['b','w'].filter(c=>S.dk[c].length);
 const lg=m=>{S.log.push(m);if(S.log.length>6)S.log.shift()};
 function ins(h,t,pos){if(t.v==='J')h.splice(pos,0,t);else{let j=-1;h.forEach((x,i)=>{if(x.v!=='J'&&key(x)<key(t))j=i});h.splice(j+1,0,t)}}
-function turn0(){S.dr=null;S.g=0;S.pl=0;S.ph=avail().length?'draw':'guess'}
+function turn0(){S.dr=null;S.g=0;S.pl=0;S.ph=avail().length?'draw':'guess';const q=S.P[S.t];S.td=(S.tl&&q&&!q.bot)?Date.now()+S.tl*1000:0}
 function dInit(p,c){if(S.ph!=='setup'||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;ins(p.h,t,Math.floor(R()*(p.h.length+1)));if(S.P.every(q=>q.h.length>=S.N)){S.t=0;lg('게임 시작!');turn0()}}
 function chk(q){if(!q.out&&q.h.every(t=>t.o)){q.out=1;lg(q.name+' 탈락');const al=S.P.filter(p=>!p.out);if(al.length<2){S.ph='over';S.win=al[0].id}}}
 function nxt(){if(S.ph==='over')return;do S.t=(S.t+1)%S.P.length;while(S.P[S.t].out);turn0()}
 function fin(){const c=S.P[S.t];if(!S.dr)return nxt();if(S.dr.v==='J'){S.ph='place';return}S.dr.o=S.pl;ins(c.h,S.dr,0);S.dr=null;chk(c);nxt()}
 function act(a){
   if(!S||!a)return;const p=S.P.find(x=>x.id===a.pid),c=S.P[S.t],host=S.P[0];
+  if(S.pz&&!['resume','chat','leave'].includes(a.t))return;
   if(a.t==='join'){if(S.ph==='lobby'&&!p&&S.P.length<4&&a.pid)S.P.push({id:String(a.pid).slice(0,12),name:String(a.name||'손님').slice(0,10),h:[],out:0})}
   else if(!p)return;
   else if(a.t==='bot'&&S.ph==='lobby'&&p===host&&S.P.length<4){const n=S.P.filter(x=>x.bot).length;S.P.push({id:'ai'+S.P.length+Math.floor(R()*1e4),name:'AI '+['민','서','준'][n%3],bot:1,h:[],out:0})}
@@ -219,8 +231,12 @@ function act(a){
     S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0});
     S.P.filter(x=>x.bot).forEach(b=>{for(let n=0;n<S.N;n++){const av=avail();dInit(b,av[Math.floor(R()*av.length)])}})}
   else if(a.t==='kick'&&S.ph==='lobby'&&p===host){const q=S.P.find(x=>x.id===a.id);if(!q||q===host)return;S.P=S.P.filter(x=>x!==q);if(!q.bot&&rm)Promise.resolve(rm.emit('st',{to:q.id,kick:1})).catch(()=>{})}
+  else if(a.t==='pause'){if(S.pz||p.bot||['lobby','over'].includes(S.ph))return;S.pz=p.id;S.pzd=Date.now()+60000;S.tdr=S.td?Math.max(0,S.td-Date.now()):null;lg(p.name+' 일시정지 (최대 60초)')}
+  else if(a.t==='resume'){if(!S.pz||(S.pz!==p.id&&p!==host))return;unpause();lg('게임 계속')}
+  else if(a.t==='tl'&&S.ph==='lobby'&&p===host){S.tl=[0,30,60,90].includes(a.v)?a.v:0}
   else if(a.t==='chat'){const x=String(a.x||'').trim().slice(0,100);if(!x)return;S.cs=(S.cs|0)+1;(S.chat=S.chat||[]).push({i:S.cs,n:p.name,x,u:p.id});if(S.chat.length>30)S.chat.shift()}
   else if(a.t==='leave'&&p!==host){
+    if(S.pz===p.id)unpause();
     if(S.ph==='lobby'||S.ph==='over')S.P=S.P.filter(x=>x!==p);
     else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0})}
     else{const wasCur=c===p;p.out=1;p.h.forEach(t=>{t.o=1});lg(p.name+' 나감');
@@ -238,19 +254,20 @@ function act(a){
   else if(a.t==='pen'&&S.ph==='pen'&&p===c){const t=c.h[a.k];if(!t||t.o)return;t.o=1;chk(c);nxt()}
   else if(a.t==='again'&&S.ph==='over'&&p===host){S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0})}
   else return;
+  if(S.ph==='lobby'||S.ph==='over'){if(S.pz)unpause();S.td=0}
   bc();sched()}
 function bc(){
   if(!isHost||!S)return;
-  const pub={ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],dk:{b:S.dk.b.length,w:S.dk.w.length},
+  const pub={ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],pz:(S.ph==='lobby'||S.ph==='over')?null:(S.pz||null),tl:S.tl|0,tr:S.pz?(S.tdr!=null?S.tdr:-1):((S.td&&['draw','guess','place','pen'].includes(S.ph))?Math.max(0,S.td-Date.now()):-1),pr:S.pz?Math.max(0,(S.pzd||0)-Date.now()):0,dk:{b:S.dk.b.length,w:S.dk.w.length},
     P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
   S.P.forEach(p=>{if(p.bot)return;
     const m={to:p.id,s:pub,me:p.h.map(t=>[t.c,t.v,t.o]),dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
     if(p.id===me.id)recv(m);else if(rm)rm.emit('st',m).catch(()=>{})})}
 function sched(){
-  if(!isHost||botT||!S)return;const c=S.P[S.t];
+  if(!isHost||botT||!S||S.pz)return;const c=S.P[S.t];
   if(c&&c.bot&&['draw','guess','place','pen'].includes(S.ph))botT=setTimeout(()=>{botT=0;bot()},1100)}
 function bot(){
-  const b=S.P[S.t];if(!b||!b.bot)return;const id=b.id;
+  const b=S.P[S.t];if(!b||!b.bot||S.pz)return;const id=b.id;
   if(S.ph==='draw'){const av=avail();return act({t:'draw',pid:id,c:av[Math.floor(R()*av.length)]})}
   if(S.ph==='place')return act({t:'place',pid:id,pos:Math.floor(R()*(b.h.length+1))});
   if(S.ph==='pen')return act({t:'pen',pid:id,k:b.h.findIndex(t=>!t.o)});
@@ -272,7 +289,7 @@ function send(a){a.pid=me.id;if(isHost)act(a);else if(rm)rm.emit('act',a).catch(
 const turnMine=c=>{if(!c)return false;const s=c.s,q=s.P[s.t];return !!q&&q.id===me.id&&['draw','guess','place','pen'].includes(s.ph)};
 function yourTurn(){const b=document.createElement('div');b.className='myturn';b.textContent='내 차례!';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);
   try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(_){}BGM.ding()}
-function recv(m){if(!m||m.to!==me.id)return;if(m.bye){cleanup();render();alert('방장이 나가서 방이 닫혔어요.');return}if(m.kick){C=null;joining=false;sel=null;render();chatUpd();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);C=m;render();chatUpd();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
+function recv(m){if(leaving||!m||m.to!==me.id)return;if(m.bye){cleanup();render();alert('방장이 나가서 방이 닫혔어요.');return}if(m.kick){C=null;joining=false;sel=null;render();chatUpd();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);m.at=Date.now();C=m;render();chatUpd();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
 let dbg='';const setDbg=t=>{dbg=t;if(joining&&!C){const e=document.querySelector('p.big + p.m');if(e)e.textContent=t}};
 const genCode=()=>Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
 const MQB=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
@@ -312,27 +329,81 @@ function cleanup(){
   try{pc&&pc.close()}catch(_){}pc=null;
   rm=null;S=null;C=null;isHost=false;joining=false;code='';sel=null;conn=null;
   chatUpd()}
+function unpause(){S.pz=null;S.pzd=0;if(S.tdr!=null){S.td=Date.now()+S.tdr;S.tdr=null}}
+function tmo(){
+  const c=S.P[S.t];if(!c||!['draw','guess','place','pen'].includes(S.ph))return;
+  lg(c.name+' 시간 초과');
+  for(let n=0;n<5&&S.P[S.t]===c&&S.ph!=='over';n++){
+    if(S.ph==='draw'){const av=avail();if(av.length){const k=av[Math.floor(R()*av.length)];S.dr=S.dk[k].pop();S.dr.o=0}S.ph='guess';S.g=0}
+    else if(S.ph==='guess'){if(S.g){S.pl=0;fin()}else if(S.dr){S.pl=1;fin()}else S.ph='pen'}
+    else if(S.ph==='place'){S.dr.o=S.pl;ins(c.h,S.dr,Math.floor(R()*(c.h.length+1)));S.dr=null;chk(c);nxt()}
+    else if(S.ph==='pen'){const hs=c.h.map((t,i)=>i).filter(i=>!c.h[i].o);if(hs.length)c.h[hs[Math.floor(R()*hs.length)]].o=1;chk(c);nxt()}
+    else break}}
+function tmTxt(){
+  if(!C||!C.s)return{t:'',p:0};const s=C.s,el=Date.now()-(C.at||Date.now());
+  const sec=ms=>Math.ceil(Math.max(0,ms)/1000);
+  return{t:(!s.pz&&s.tl&&s.tr>=0&&['draw','guess','place','pen'].includes(s.ph))?sec(s.tr-el):'',p:s.pz?sec((s.pr||0)-el):0}}
+function tmHtml(){const x=tmTxt();return x.t===''?'':'⏱ '+x.t+'초'}
+setInterval(()=>{
+  const x=tmTxt(),e=$('#tmr');
+  if(e){const h=x.t===''?'':'⏱ '+x.t+'초';if(e.textContent!==h)e.textContent=h;e.classList.toggle('hot',x.t!==''&&x.t<=10)}
+  const z=$('#pzt');if(z)z.textContent='남은 시간 '+x.p+'초 (최대 60초)'},250);
+setInterval(()=>{
+  if(!isHost||!S||leaving)return;const now=Date.now();
+  if(S.pz){if(S.pzd&&now>=S.pzd){lg('일시정지 60초 종료 · 게임 계속');unpause();bc();sched()}return}
+  if(S.td&&now>=S.td&&['draw','guess','place','pen'].includes(S.ph)){const c=S.P[S.t];S.td=0;if(c&&!c.bot){tmo();bc();sched()}}
+},500);
+function pzOverlay(s,P,mi){
+  const q=P.find(x=>x.id===s.pz),mine=s.pz===me.id,host=mi===0,n=q?esc(q.n):'';
+  return `<div class="pzo"><div class="pzc"><h2>⏸ 일시정지</h2><p>${mine?'내가 게임을 멈췄어요.<br>계속하려면 아래 버튼을 눌러요.':n+'님이 게임을 멈췄어요.<br>'+n+'님이 계속하기를 누르면 이어져요.'}</p><p class="m" id="pzt">남은 시간 ${tmTxt().p}초 (최대 60초)</p>${mine?'<button style="width:100%" onclick="send({t:\'resume\'})">계속하기</button>':host?'<button class="s" style="width:100%" onclick="send({t:\'resume\'})">방장 권한으로 계속하기</button>':''}<button class="s" style="width:100%" onclick="leave()">나가기</button></div></div>`}
+let leaving=0;
+function askYN(msg,yes){
+  const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
+  o.innerHTML='<div style="background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:16px;padding:18px;max-width:320px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.4)"><p style="margin:0 0 14px;font-size:16px;line-height:1.5">'+msg+'</p><div class="row"><button class="s" style="flex:1;margin:0" data-n>취소</button><button style="flex:1;margin:0;background:var(--acc);color:#fff" data-y>나가기</button></div></div>';
+  o.querySelector('[data-n]').onclick=()=>o.remove();
+  o.querySelector('[data-y]').onclick=()=>{o.remove();yes()};
+  document.body.appendChild(o)}
 function leave(){
+  if(leaving)return;
   if(!S&&!C){cleanup();render();return}
-  const host=isHost;
-  if(!confirm(host?'방장이 나가면 방이 닫히고 모두 나가게 돼요. 나갈까요?':'게임에서 나갈까요?'))return;
-  if(host){if(rm&&S)S.P.forEach(p=>{if(!p.bot&&p.id!==me.id)rm.emit('st',{to:p.id,bye:1})})}
-  else send({t:'leave'});
-  setTimeout(()=>{cleanup();render()},400)}
+  askYN(isHost?'방장이 나가면 방이 닫히고<br>모두 나가게 돼요. 나갈까요?':'게임에서 나갈까요?',doLeave)}
+function doLeave(){
+  leaving=1;
+  try{
+    if(isHost){if(rm&&S)S.P.forEach(p=>{if(!p.bot&&p.id!==me.id)rm.emit('st',{to:p.id,bye:1})})}
+    else send({t:'leave'})
+  }catch(e){}
+  clearInterval(bcT);clearTimeout(botT);botT=0;
+  try{skipIntro()}catch(_){}
+  C=null;sel=null;joining=false;conn=null;
+  try{chatUpd();render()}catch(e){}
+  setTimeout(()=>{cleanup();leaving=0;render()},350)}
+let chatLast=null;
+function chatPos(){const v=window.visualViewport,pn=$('#cpn');if(!v)return;
+  pn.style.bottom=Math.max(0,window.innerHeight-v.height-v.offsetTop)+'px';pn.style.height=Math.min(v.height*.4,190)+'px'}
+if(window.visualViewport){visualViewport.addEventListener('resize',chatPos);visualViewport.addEventListener('scroll',chatPos)}
 function chatUpd(){
-  const b=$('#cbtn'),pn=$('#cpn'),ch=(C&&C.s&&C.s.chat)||[];
-  if(!C){b.style.display='none';pn.style.display='none';chatOpen=false;chatSeen=null;chatSig='';return}
+  const b=$('#cbtn'),pn=$('#cpn'),fd=$('#cfeed'),ch=(C&&C.s&&C.s.chat)||[];
+  if(!C){b.style.display='none';pn.style.display='none';fd.innerHTML='';chatOpen=false;chatSeen=null;chatLast=null;chatSig='';return}
   b.style.display='flex';
   const last=ch.length?ch[ch.length-1].i:0;
+  if(chatLast===null)chatLast=last;
+  if(last>chatLast){
+    if(!chatOpen)ch.filter(m=>m.i>chatLast&&m.u!==me.id).slice(-3).forEach(m=>{
+      const d=document.createElement('div');d.textContent=m.n+': '+m.x;fd.appendChild(d);
+      while(fd.children.length>3)fd.removeChild(fd.firstChild);
+      setTimeout(()=>d.remove(),4500)});
+    chatLast=last}
   if(chatSeen===null||chatOpen)chatSeen=last;
   const un=ch.filter(m=>m.i>chatSeen&&m.u!==me.id).length,bd=$('#cbd');
   bd.textContent=un>9?'9+':un;bd.style.display=un&&!chatOpen?'block':'none';
   pn.style.display=chatOpen?'flex':'none';
+  if(chatOpen)fd.innerHTML='';
   const sig=ch.map(m=>m.i).join(',')+'|'+chatOpen;
   if(sig!==chatSig){chatSig=sig;const l=$('#clist');
-    l.innerHTML=ch.length?ch.map(m=>`<div class="cm${m.u===me.id?' me':''}"><small>${esc(m.n)}</small>${esc(m.x)}</div>`).join(''):'<p class="m">아직 메시지가 없어요</p>';
+    l.innerHTML=ch.length?ch.map(m=>`<div class="cm${m.u===me.id?' me':''}"><small>${esc(m.n)}</small>${esc(m.x)}</div>`).join(''):'<p class="m" style="text-align:center;margin:auto">아직 메시지가 없어요</p>';
     l.scrollTop=l.scrollHeight}}
-function chatToggle(){chatOpen=!chatOpen;chatUpd();if(chatOpen)setTimeout(()=>{const i=$('#cin');if(i)i.focus()},60)}
+function chatToggle(){chatOpen=!chatOpen;chatUpd();if(chatOpen){chatPos();const l=$('#clist');l.scrollTop=l.scrollHeight}if(chatOpen)setTimeout(()=>{const i=$('#cin');if(i)i.focus()},60)}
 function chatSend(){const el=$('#cin'),x=el.value.trim();if(!x)return;el.value='';send({t:'chat',x});el.focus()}
 $('#cin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();chatSend()}});
 let ERR=null;
@@ -423,6 +494,7 @@ function render(){
     a.innerHTML=`<div class="hero lb"><p>방 코드</p><div class="tiles">${cd}</div><p style="margin-top:14px">친구에게 코드를 알려주세요 · ${P.length}/4명</p></div>
     ${host&&code!=='직접'?`<div class="row lbb"><button class="s" onclick="cpRoom()">${RM?'코드 복사':'링크 복사'}</button><button class="s kk" onclick="kkRoom()">공유하기 (카톡 등)</button></div>`:''}
     <div class="seats">${seats}</div>
+    <div class="tlb"><span class="m">턴 제한시간</span>${host?`<div class="row">${[0,30,60,90].map(v=>`<button class="s${(s.tl|0)===v?' on':''}" onclick="send({t:'tl',v:${v}})">${v?v+'초':'없음'}</button>`).join('')}</div>`:`<b>${s.tl?s.tl+'초':'없음'}</b>`}</div>
     ${host?`<div class="row lbb"><button class="s" onclick="send({t:'bot'})" ${P.length>=4?'disabled':''}>AI 추가</button><button onclick="send({t:'start'})" ${P.length<2?'disabled':''}>게임 시작</button></div>`:'<p class="m" style="text-align:center">방장이 시작하길 기다리는 중…</p>'}
     <p class="m" style="text-align:center">2~4명까지 참여할 수 있어요.${host&&P.length>1?' 참가자를 왼쪽으로 밀면 삭제할 수 있어요.':''}</p>
     <p style="text-align:center;margin:10px 0 0"><button class="s" onclick="leave()">나가기</button></p>`;return}
@@ -447,9 +519,10 @@ function render(){
   else if(ph==='over'){const w=P.find(p=>p.id===s.win);hint=`🏆 ${w?esc(w.n):''} 승리!`;end=host?`<button onclick="send({t:'again'})">대기실로</button>`:''}
   const ttl=ph==='over'?'게임 종료':ph==='setup'?'시작 타일 뽑기':my?'내 차례':esc(cur.n)+'님 차례';
   {const on=turnMine(C);document.body.classList.toggle('mt',on);if(on)document.title='🔴 내 차례 · 다빈치 코드'}
-  a.innerHTML=`<div class="bn${my?' me':''}">${ttl}${hint?`<small>${hint}</small>`:''}</div><div class="m">방 ${esc(code)} · 남은 타일 흑 ${s.dk.b} / 백 ${s.dk.w}</div>${opp}${pool}
+  a.innerHTML=`<div class="bn${my?' me':''}">${ttl}${hint?`<small>${hint}</small>`:''}</div><div id="tmr" class="tmr">${tmHtml()}</div><div class="m">방 ${esc(code)} · 남은 타일 흑 ${s.dk.b} / 백 ${s.dk.w}</div>${opp}${pool}
   <div id="mh" class="pl${my?' cur':''}"><span>${esc(P[mi]?P[mi].n:'')} (나)<em>${P[mi]&&P[mi].out?'탈락':''}</em></span><div class="hand">${mine}</div></div>
-  <p style="text-align:center;margin:14px 0 4px"><button class="s" onclick="leave()">게임 나가기</button></p>
+  <p style="text-align:center;margin:14px 0 4px">${ph!=='over'?'<button class="s" onclick="send({t:\'pause\'})">⏸ 일시정지</button> ':''}<button class="s" onclick="leave()">게임 나가기</button></p>
+  ${s.pz?pzOverlay(s,P,mi):''}
   ${end}${dock}`}
 /* ---------- direct phone-to-phone link (WebRTC, copy/paste codes) ---------- */
 let conn=null,pc=null;
