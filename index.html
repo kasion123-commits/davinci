@@ -254,12 +254,13 @@ const turnMine=c=>{if(!c)return false;const s=c.s,q=s.P[s.t];return !!q&&q.id===
 function yourTurn(){const b=document.createElement('div');b.className='myturn';b.textContent='내 차례!';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);
   try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(_){}BGM.ding()}
 function recv(m){if(!m||m.to!==me.id)return;if(m.kick){C=null;joining=false;sel=null;render();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);C=m;render();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
+let dbg='';const setDbg=t=>{dbg=t;if(joining&&!C){const e=document.querySelector('p.big + p.m');if(e)e.textContent=t}};
 const genCode=()=>Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
 const PJS='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-const loadPeer=()=>new Promise((ok,no)=>{if(window.Peer)return ok();const x=document.createElement('script');x.src=PJS;x.onload=ok;x.onerror=()=>no(new Error('peerjs'));document.head.appendChild(x)});
+const loadPeer=()=>new Promise((ok,no)=>{if(window.Peer)return ok();setDbg('연결 도구 불러오는 중…');const x=document.createElement('script');x.src=PJS;const t=setTimeout(()=>no(new Error('도구 로딩 시간 초과')),10000);x.onload=()=>{clearTimeout(t);ok()};x.onerror=()=>{clearTimeout(t);no(new Error('도구 로딩 실패'))};document.head.appendChild(x)});
 const PCFG={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]};
 async function pHost(cd){
-  await loadPeer();
+  await loadPeer();setDbg('방 서버에 접속 중…');
   return new Promise((ok,no)=>{
     const p=new Peer('dv-'+cd,{config:PCFG}),conns=[],h={};
     p.on('open',()=>ok({emit:(t,d)=>{const m=JSON.stringify([t,d]);conns.forEach(c=>{try{if(c.open)c.send(m)}catch(_){}});return Promise.resolve()},on:(t,f)=>{h[t]=f;return()=>{}}}));
@@ -270,16 +271,18 @@ async function pHost(cd){
     p.on('error',e=>no(e));
     setTimeout(()=>no(new Error('timeout')),15000)})}
 async function pJoin(cd){
-  await loadPeer();
+  await loadPeer();setDbg('방 서버에 접속 중…');
   return new Promise((ok,no)=>{
     const p=new Peer({config:PCFG}),h={};
     p.on('open',()=>{
+      setDbg('방장에게 연결 중…');
       const c=p.connect('dv-'+cd,{reliable:true});
-      c.on('open',()=>ok({emit:(t,d)=>{try{c.send(JSON.stringify([t,d]))}catch(_){}return Promise.resolve()},on:(t,f)=>{h[t]=f;return()=>{}}}));
+      c.on('open',()=>{setDbg('연결됨! 방장 응답을 기다리는 중…');ok({emit:(t,d)=>{try{c.send(JSON.stringify([t,d]))}catch(_){}return Promise.resolve()},on:(t,f)=>{h[t]=f;return()=>{}}})});
       c.on('data',e=>{try{const[t,d]=JSON.parse(e);h[t]&&h[t]({data:d})}catch(_){}});
       c.on('error',no)});
     p.on('error',no);
     setTimeout(()=>no(new Error('timeout')),15000)})}
+let ERR=null;
 async function mk(){
   me.name=($('#nm').value||'').trim().slice(0,10)||'나';code=genCode();isHost=true;
   S={ph:'lobby',P:[{id:me.id,name:me.name,h:[],out:0}],dk:{b:[],w:[]},t:0,dr:null,g:0,pl:0,N:4,log:[],win:null};
@@ -288,15 +291,16 @@ async function mk(){
   else{
     for(let n=0;n<4&&!rm;n++){
       try{rm=await pHost(code);rm.on('act',m=>act(m.data))}
-      catch(e){rm=null;if(e&&e.type==='unavailable-id'){code=genCode();continue}break}}
-    if(!rm)alert('방 서버에 연결하지 못했어요. 지금은 AI 대전만 가능해요. 잠시 뒤 다시 시도해 주세요.')}
+      catch(e){rm=null;if(e&&e.type==='unavailable-id'){code=genCode();continue}ERR=e;break}}
+    if(!rm)alert('방 서버에 연결하지 못했어요. 지금은 AI 대전만 가능해요.\n원인: '+((ERR&&(ERR.type||ERR.message))||'알 수 없음'))}
   joining=false;setInterval(bc,5000);bc()}
 async function jn(){
   me.name=($('#nm').value||'').trim().slice(0,10)||'손님';code=($('#cd').value||'').trim().toLowerCase();
   if(!/^[a-z0-9]{4}$/.test(code)){alert('방 코드는 4자리예요.');return}
   joining=true;render();
   try{rm=RM?await RM.join('dv-'+code):await pJoin(code);rm.on('st',m=>recv(m.data))}
-  catch(e){joining=false;alert('방에 연결하지 못했어요. 방장이 방을 만들었는지, 코드가 맞는지 확인해 주세요.');render();return}
+  catch(e){joining=false;alert('방에 연결하지 못했어요. 방장이 방을 만들었는지, 코드가 맞는지 확인해 주세요.\n원인: '+((e&&(e.type||e.message))||'알 수 없음'));render();return}
+  setTimeout(()=>{if(!C&&joining){joining=false;alert('방장과 연결은 됐는데 응답이 없어요. 방장 화면이 켜져 있고 대기실인지 확인해 주세요.');render()}},15000);
   const ping=setInterval(()=>{if(C)return clearInterval(ping);send({t:'join',name:me.name})},1800);send({t:'join',name:me.name})}
 const sl=(i,k)=>{sel={i,k};render()};
 const pk=(c,i)=>{BGM.tap();if(i!==undefined)lt[c]=i;send({t:C.s.ph==='setup'?'init':'draw',c})};
@@ -331,7 +335,7 @@ function home(){
   if(conn)return cpanel();
   const hk=[['w',3],['b',7],['b'],['w','J'],['b',11]].map((x,i)=>tl(x,'',`style="--i:${i};transform:rotate(${[-6,3,-2,5,-4][i]}deg)"`)).join('');
   return `<div class="hero"><div class="tiles">${hk}</div><h1>다빈치 코드</h1><p>숨겨진 숫자 타일을 추리해 맞히는 2~4인 게임</p></div>
-  ${joining?'<p class="big">연결 중…</p>':`<div class="entry"><input id="nm" placeholder="내 이름" maxlength="10" value="${esc(me.name)}">
+  ${joining?'<p class="big">연결 중…</p><p class="m" style="text-align:center">'+esc(dbg)+'</p>':`<div class="entry"><input id="nm" placeholder="내 이름" maxlength="10" value="${esc(me.name)}">
   <button class="go" onclick="mk()">방 만들기</button>
   <div class="or">또는 방 코드로 참가</div>
   <div class="row"><input id="cd" placeholder="방 코드" maxlength="4" value="${esc(LINK_R)}"><button onclick="jn()">참가</button></div>
