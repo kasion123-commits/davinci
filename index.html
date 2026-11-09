@@ -157,8 +157,19 @@ details.dc[open]{background:var(--card);border:1px solid var(--line);border-radi
 button.kk{background:#fee500;color:#191919;border-color:#e6cf00;font-weight:700}
 .lbb button.kk:last-child{background:#fee500;color:#191919}
 .lnk{margin:12px 0 0;gap:8px}.lnk button{flex:1;margin:0}
+#cbtn{display:none;position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 14px);right:calc(max(18px,calc((100vw - 600px)/2 + 20px)) + 46px);width:36px;height:36px;padding:0;margin:0;border-radius:50%;align-items:center;justify-content:center;font-size:17px;background:var(--card);color:var(--fg);border:1px solid var(--line)}
+#cbd{display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:var(--acc);color:#fff;font:700 11px/17px system-ui,sans-serif;font-style:normal;text-align:center;padding:0 4px;box-sizing:border-box}
+#cpn{display:none;position:fixed;z-index:60;left:0;right:0;top:0;margin:0 auto;max-width:560px;height:min(44vh,340px);flex-direction:column;background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 16px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 10px;box-sizing:border-box}
+#cpn .chh{display:flex;justify-content:space-between;align-items:center}#cpn .chh button{margin:0;padding:6px 12px}
+#clist{flex:1;overflow-y:auto;margin:6px 0;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.cm{align-self:flex-start;max-width:82%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;word-break:break-word}
+.cm small{display:block;color:var(--mut);font-size:11px}.cm.me{align-self:flex-end;background:var(--acc);color:#fff;border-color:transparent}.cm.me small{color:rgba(255,255,255,.8)}
+#cpn .chr{gap:6px}#cpn .chr input{margin:0}#cpn .chr button{margin:0;flex:none}
+.bn{padding-right:96px!important}
 </style></head>
-<body><div id="app"></div><button id="bgm" aria-label="음악 켜기/끄기"></button>
+<body><div id="app"></div>
+<button id="cbtn" aria-label="채팅" onclick="chatToggle()">💬<i id="cbd"></i></button>
+<div id="cpn"><div class="chh"><b>채팅</b><button class="s" onclick="chatToggle()">닫기</button></div><div id="clist"></div><div class="row chr"><input id="cin" maxlength="100" placeholder="메시지 입력" enterkeyhint="send" autocomplete="off"><button onclick="chatSend()">보내기</button></div></div><button id="bgm" aria-label="음악 켜기/끄기"></button>
 <script>
 const $=s=>document.querySelector(s),R=Math.random,esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let RM=null,rm=null,isHost=false,joining=false,S=null,C=null,sel=null,botT=0,code='';
@@ -208,6 +219,14 @@ function act(a){
     S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0});
     S.P.filter(x=>x.bot).forEach(b=>{for(let n=0;n<S.N;n++){const av=avail();dInit(b,av[Math.floor(R()*av.length)])}})}
   else if(a.t==='kick'&&S.ph==='lobby'&&p===host){const q=S.P.find(x=>x.id===a.id);if(!q||q===host)return;S.P=S.P.filter(x=>x!==q);if(!q.bot&&rm)Promise.resolve(rm.emit('st',{to:q.id,kick:1})).catch(()=>{})}
+  else if(a.t==='chat'){const x=String(a.x||'').trim().slice(0,100);if(!x)return;S.cs=(S.cs|0)+1;(S.chat=S.chat||[]).push({i:S.cs,n:p.name,x,u:p.id});if(S.chat.length>30)S.chat.shift()}
+  else if(a.t==='leave'&&p!==host){
+    if(S.ph==='lobby'||S.ph==='over')S.P=S.P.filter(x=>x!==p);
+    else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.out=0})}
+    else{const wasCur=c===p;p.out=1;p.h.forEach(t=>{t.o=1});lg(p.name+' 나감');
+      const al=S.P.filter(x=>!x.out);
+      if(al.length<2){S.ph='over';S.win=al[0]?al[0].id:null;S.dr=null}
+      else if(wasCur){S.dr=null;nxt()}}}
   else if(a.t==='init')dInit(p,a.c);
   else if(a.t==='draw'&&S.ph==='draw'&&p===c&&S.dk[a.c]&&S.dk[a.c].length){S.dr=S.dk[a.c].pop();S.dr.o=0;S.ph='guess';S.g=0}
   else if(a.t==='guess'&&S.ph==='guess'&&p===c){
@@ -222,7 +241,7 @@ function act(a){
   bc();sched()}
 function bc(){
   if(!isHost||!S)return;
-  const pub={ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,dk:{b:S.dk.b.length,w:S.dk.w.length},
+  const pub={ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],dk:{b:S.dk.b.length,w:S.dk.w.length},
     P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
   S.P.forEach(p=>{if(p.bot)return;
     const m={to:p.id,s:pub,me:p.h.map(t=>[t.c,t.v,t.o]),dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
@@ -253,7 +272,7 @@ function send(a){a.pid=me.id;if(isHost)act(a);else if(rm)rm.emit('act',a).catch(
 const turnMine=c=>{if(!c)return false;const s=c.s,q=s.P[s.t];return !!q&&q.id===me.id&&['draw','guess','place','pen'].includes(s.ph)};
 function yourTurn(){const b=document.createElement('div');b.className='myturn';b.textContent='내 차례!';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);
   try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(_){}BGM.ding()}
-function recv(m){if(!m||m.to!==me.id)return;if(m.kick){C=null;joining=false;sel=null;render();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);C=m;render();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
+function recv(m){if(!m||m.to!==me.id)return;if(m.bye){cleanup();render();alert('방장이 나가서 방이 닫혔어요.');return}if(m.kick){C=null;joining=false;sel=null;render();chatUpd();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);C=m;render();chatUpd();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
 let dbg='';const setDbg=t=>{dbg=t;if(joining&&!C){const e=document.querySelector('p.big + p.m');if(e)e.textContent=t}};
 const genCode=()=>Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
 const MQB=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
@@ -285,6 +304,37 @@ async function mqRoom(cd,role){
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;
   (window.mqCls||[]).forEach(c=>{if(!c.connected&&!c.reconnecting)try{c.reconnect()}catch(_){}});
   if(isHost)setTimeout(bc,500)});
+let bcT=0,chatSeen=null,chatOpen=false,chatSig='';
+function cleanup(){
+  try{skipIntro()}catch(_){}
+  clearInterval(bcT);clearTimeout(botT);botT=0;
+  (window.mqCls||[]).forEach(c=>{try{c.end(true)}catch(_){}});window.mqCls=[];
+  try{pc&&pc.close()}catch(_){}pc=null;
+  rm=null;S=null;C=null;isHost=false;joining=false;code='';sel=null;conn=null;
+  chatUpd()}
+function leave(){
+  if(!S&&!C){cleanup();render();return}
+  const host=isHost;
+  if(!confirm(host?'방장이 나가면 방이 닫히고 모두 나가게 돼요. 나갈까요?':'게임에서 나갈까요?'))return;
+  if(host){if(rm&&S)S.P.forEach(p=>{if(!p.bot&&p.id!==me.id)rm.emit('st',{to:p.id,bye:1})})}
+  else send({t:'leave'});
+  setTimeout(()=>{cleanup();render()},400)}
+function chatUpd(){
+  const b=$('#cbtn'),pn=$('#cpn'),ch=(C&&C.s&&C.s.chat)||[];
+  if(!C){b.style.display='none';pn.style.display='none';chatOpen=false;chatSeen=null;chatSig='';return}
+  b.style.display='flex';
+  const last=ch.length?ch[ch.length-1].i:0;
+  if(chatSeen===null||chatOpen)chatSeen=last;
+  const un=ch.filter(m=>m.i>chatSeen&&m.u!==me.id).length,bd=$('#cbd');
+  bd.textContent=un>9?'9+':un;bd.style.display=un&&!chatOpen?'block':'none';
+  pn.style.display=chatOpen?'flex':'none';
+  const sig=ch.map(m=>m.i).join(',')+'|'+chatOpen;
+  if(sig!==chatSig){chatSig=sig;const l=$('#clist');
+    l.innerHTML=ch.length?ch.map(m=>`<div class="cm${m.u===me.id?' me':''}"><small>${esc(m.n)}</small>${esc(m.x)}</div>`).join(''):'<p class="m">아직 메시지가 없어요</p>';
+    l.scrollTop=l.scrollHeight}}
+function chatToggle(){chatOpen=!chatOpen;chatUpd();if(chatOpen)setTimeout(()=>{const i=$('#cin');if(i)i.focus()},60)}
+function chatSend(){const el=$('#cin'),x=el.value.trim();if(!x)return;el.value='';send({t:'chat',x});el.focus()}
+$('#cin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();chatSend()}});
 let ERR=null;
 async function mk(){
   me.name=($('#nm').value||'').trim().slice(0,10)||'나';code=genCode();isHost=true;
@@ -294,7 +344,7 @@ async function mk(){
   else{
     try{rm=await mqRoom(code,'h');rm.on('act',m=>act(m.data))}
     catch(e){rm=null;ERR=e;alert('방 서버에 연결하지 못했어요. 지금은 AI 대전만 가능해요.\n원인: '+((e&&(e.type||e.message))||'알 수 없음'))}}
-  joining=false;setInterval(bc,5000);bc()}
+  joining=false;clearInterval(bcT);bcT=setInterval(bc,5000);bc()}
 async function jn(){
   me.name=($('#nm').value||'').trim().slice(0,10)||'손님';code=($('#cd').value||'').trim().toLowerCase();
   if(!/^[a-z0-9]{4}$/.test(code)){alert('방 코드는 4자리예요.');return}
@@ -374,7 +424,8 @@ function render(){
     ${host&&code!=='직접'?`<div class="row lbb"><button class="s" onclick="cpRoom()">${RM?'코드 복사':'링크 복사'}</button><button class="s kk" onclick="kkRoom()">공유하기 (카톡 등)</button></div>`:''}
     <div class="seats">${seats}</div>
     ${host?`<div class="row lbb"><button class="s" onclick="send({t:'bot'})" ${P.length>=4?'disabled':''}>AI 추가</button><button onclick="send({t:'start'})" ${P.length<2?'disabled':''}>게임 시작</button></div>`:'<p class="m" style="text-align:center">방장이 시작하길 기다리는 중…</p>'}
-    <p class="m" style="text-align:center">2~4명까지 참여할 수 있어요.${host&&P.length>1?' 참가자를 왼쪽으로 밀면 삭제할 수 있어요.':''}</p>`;return}
+    <p class="m" style="text-align:center">2~4명까지 참여할 수 있어요.${host&&P.length>1?' 참가자를 왼쪽으로 밀면 삭제할 수 있어요.':''}</p>
+    <p style="text-align:center;margin:10px 0 0"><button class="s" onclick="leave()">나가기</button></p>`;return}
   const pick=(k,t)=>ph==='pen'&&my&&!t[2]?`onclick="send({t:'pen',k:${k}})"`:'';
   const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.out?'탈락':''].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>tl(t,sel&&sel.i===i&&sel.k===k?'sel':'',my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')).join('')}</div></div>`).join('');
   let mine='';
@@ -398,6 +449,7 @@ function render(){
   {const on=turnMine(C);document.body.classList.toggle('mt',on);if(on)document.title='🔴 내 차례 · 다빈치 코드'}
   a.innerHTML=`<div class="bn${my?' me':''}">${ttl}${hint?`<small>${hint}</small>`:''}</div><div class="m">방 ${esc(code)} · 남은 타일 흑 ${s.dk.b} / 백 ${s.dk.w}</div>${opp}${pool}
   <div id="mh" class="pl${my?' cur':''}"><span>${esc(P[mi]?P[mi].n:'')} (나)<em>${P[mi]&&P[mi].out?'탈락':''}</em></span><div class="hand">${mine}</div></div>
+  <p style="text-align:center;margin:14px 0 4px"><button class="s" onclick="leave()">게임 나가기</button></p>
   ${end}${dock}`}
 /* ---------- direct phone-to-phone link (WebRTC, copy/paste codes) ---------- */
 let conn=null,pc=null;
@@ -410,7 +462,7 @@ async function dh(){
   S={ph:'lobby',P:[{id:me.id,name:me.name,h:[],out:0}],dk:{b:[],w:[]},t:0,dr:null,g:0,pl:0,N:4,log:[],win:null};
   conn={m:'h',out:'',busy:1};render();
   try{pc=new RTCPeerConnection(ICE);const dc=pc.createDataChannel('g');rm=mkRm(dc);rm.on('act',m=>act(m.data));
-    dc.onopen=()=>{conn=null;setInterval(bc,5000);bc()};
+    dc.onopen=()=>{conn=null;clearInterval(bcT);bcT=setInterval(bc,5000);bc()};
     await pc.setLocalDescription(await pc.createOffer());await gw(pc);conn.out=enc(pc.localDescription);conn.busy=0}
   catch(e){conn.err='이 환경에서는 직접 연결을 만들 수 없어요.';conn.busy=0}
   render()}
