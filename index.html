@@ -149,6 +149,7 @@ body.mt::after{content:"";position:fixed;inset:0;z-index:4;pointer-events:none;b
 /* ---- 상대 타일은 공개 여부와 관계없이 일직선 정렬 ---- */
 .pl:not(#mh) .hand{padding-top:8px;align-items:center}
 .pl:not(#mh) .t.op{transform:none}
+.sbd{display:flex;gap:6px 14px;justify-content:center;flex-wrap:wrap;margin:6px 0 2px;font-size:13px;opacity:.9}.sbd b{color:var(--acc)}
 .t.rv b{animation:rvIn 1s ease-out both;animation-delay:var(--rd,0ms)}
 @keyframes rvIn{0%{opacity:0;filter:blur(7px);transform:scale(.7)}60%{opacity:.8;filter:blur(2px)}100%{opacity:1;filter:blur(0);transform:none}}
 /* ---- 게임 방법 안내 ---- */
@@ -320,20 +321,46 @@ function ins(h,t,pos){if(t.v==='J')h.splice(pos,0,t);else{let j=-1;h.forEach((x,
 function turn0(){S.dr=null;S.g=0;S.pl=0;S.ph=avail().length?'draw':'guess';const q=S.P[S.t];S.td=(S.tl&&q&&!q.bot)?Date.now()+S.tl*1000:0}
 function setupChk(){if(S.P.every(q=>q.h.length>=S.N&&!q.jp)){S.t=Math.floor(R()*S.P.length);lg('게임 시작! '+S.P[S.t].name+' 먼저');turn0()}}
 function dInit(p,c){if(S.ph!=='setup'||p.jp||p.h.length>=S.N||!S.dk[c]||!S.dk[c].length)return;const t=S.dk[c].pop();t.o=0;if(t.v==='J'&&!p.bot&&p.h.length>0){p.jp=t;return}ins(p.h,t,Math.floor(R()*(p.h.length+1)));setupChk()}
-function chk(q){if(!q.out&&q.h.every(t=>t.o)){q.out=1;lg(q.name+' 탈락');const al=S.P.filter(p=>!p.out);if(al.length<2){S.ph='over';S.win=al[0].id}}}
+function chk(q){if(!q.out&&q.h.every(t=>t.o)){q.out=1;lg(q.name+' 탈락');const al=S.P.filter(p=>!p.out);if(al.length<2){S.ph='over';S.win=al[0].id;addWin()}}}
 function nxt(){if(S.ph==='over')return;do S.t=(S.t+1)%S.P.length;while(S.P[S.t].out);turn0()}
 function fin(){const c=S.P[S.t];if(!S.dr)return nxt();if(S.dr.v==='J'){S.ph='place';return}S.dr.o=S.pl;ins(c.h,S.dr,0);S.dr=null;chk(c);nxt()}
+var DC_AFTER=15000,DC_GRACE=45000,HOST_TO=25000,BK=null,wd=0;
+function addWin(){if(!S.win)return;S.sc=S.sc||{};S.sc[S.win]=(S.sc[S.win]|0)+1}
+function hostId(){return S.hid||(S.P[0]&&S.P[0].id)}
+function succ(){const h=hostId();return S.P.find(p=>!p.bot&&p.id!==h&&!p.dc)}
+function dropP(p){
+  const c=S.P[S.t];
+  if(S.pz===p.id)unpause();
+  if(S.ph==='lobby'||S.ph==='over')S.P=S.P.filter(x=>x!==p);
+  else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.dc=0;x.ls=Date.now();x.out=0})}
+  else{const wasCur=c===p;p.out=1;p.dc=0;p.h.forEach(t=>{t.o=1});lg(p.name+' 나감');
+    const al=S.P.filter(x=>!x.out);
+    if(al.length<2){S.ph='over';S.win=al[0]?al[0].id:null;S.dr=null;addWin()}
+    else if(wasCur){S.dr=null;nxt()}}}
+function presence(){
+  if(!['setup','draw','guess','place','pen'].includes(S.ph))return;
+  const now=Date.now(),hid=hostId();let ch=0;
+  S.P.slice().forEach(p=>{
+    if(p.bot||p.id===hid||p.out||!S.P.includes(p))return;
+    if(!p.ls)p.ls=now;
+    if(now-p.ls>DC_AFTER){
+      if(!p.dc){p.dc=now;lg(p.name+' 연결 끊김');ch=1}
+      else if(now-p.dc>DC_GRACE){dropP(p);ch=1}}});
+  if(ch)sched()}
 function act(a){
-  if(!S||!a)return;const p=S.P.find(x=>x.id===a.pid),c=S.P[S.t],host=S.P[0];
+  if(!S||!a)return;if((a.ep|0)>(S.ep|0)){demote();return}
+  const p=S.P.find(x=>x.id===a.pid),c=S.P[S.t],host=S.P.find(x=>x.id===S.hid)||S.P[0];
+  if(p&&!p.bot){if(p.dc)lg(p.name+' 다시 연결됨');p.ls=Date.now();p.dc=0}
   if(S.pz&&!['resume','chat','leave'].includes(a.t))return;
   if(a.t==='join'){if(S.ph==='lobby'&&!p&&S.P.length<4&&a.pid)S.P.push({id:String(a.pid).slice(0,12),name:String(a.name||'손님').slice(0,10),h:[],out:0})}
   else if(!p)return;
+  else if(a.t==='hb')return;
   else if(a.t==='bot'&&S.ph==='lobby'&&p===host&&S.P.length<4){const n=S.P.filter(x=>x.bot).length;S.P.push({id:'ai'+S.P.length+Math.floor(R()*1e4),name:'AI '+['민','서','준'][n%3],bot:1,h:[],out:0})}
-  else if(a.t==='start'&&S.ph==='lobby'&&p===host&&S.P.length>1){
+  else if(((a.t==='start'&&S.ph==='lobby')||(a.t==='rematch'&&S.ph==='over'))&&p===host&&S.P.length>1){
     S.gid=(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
     S.N=S.P.length>3?3:4;const d={b:[],w:[]};
     for(const k of 'bw'){for(let v=0;v<12;v++)d[k].push({c:k,v,o:0});d[k].push({c:k,v:'J',o:0});sh(d[k])}
-    S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0});
+    S.dk=d;S.ph='setup';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.dc=0;x.ls=Date.now();x.out=0});
     S.P.filter(x=>x.bot).forEach(b=>{for(let n=0;n<S.N;n++){const av=avail();dInit(b,av[Math.floor(R()*av.length)])}})}
   else if(a.t==='kick'&&S.ph==='lobby'&&p===host){const q=S.P.find(x=>x.id===a.id);if(!q||q===host)return;S.P=S.P.filter(x=>x!==q);if(!q.bot&&rm)Promise.resolve(rm.emit('st',{to:q.id,kick:1})).catch(()=>{})}
   else if(a.t==='pause'){if(S.pz||p.bot||['lobby','over'].includes(S.ph))return;S.pz=p.id;S.pzd=Date.now()+60000;S.tdr=S.td?Math.max(0,S.td-Date.now()):null;lg(p.name+' 일시정지 (최대 60초)')}
@@ -341,14 +368,7 @@ function act(a){
   else if(a.t==='lgs'&&S.ph==='lobby'&&p===host){S.lg=a.v?1:0}
   else if(a.t==='tl'&&S.ph==='lobby'&&p===host){S.tl=[0,30,60,90].includes(a.v)?a.v:0}
   else if(a.t==='chat'){const x=String(a.x||'').trim().slice(0,100);if(!x)return;S.cs=(S.cs|0)+1;(S.chat=S.chat||[]).push({i:S.cs,n:p.name,x,u:p.id});if(S.chat.length>30)S.chat.shift()}
-  else if(a.t==='leave'&&p!==host){
-    if(S.pz===p.id)unpause();
-    if(S.ph==='lobby'||S.ph==='over')S.P=S.P.filter(x=>x!==p);
-    else if(S.ph==='setup'){S.P=S.P.filter(x=>x!==p);S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0})}
-    else{const wasCur=c===p;p.out=1;p.h.forEach(t=>{t.o=1});lg(p.name+' 나감');
-      const al=S.P.filter(x=>!x.out);
-      if(al.length<2){S.ph='over';S.win=al[0]?al[0].id:null;S.dr=null}
-      else if(wasCur){S.dr=null;nxt()}}}
+  else if(a.t==='leave'&&p!==host){dropP(p)}
   else if(a.t==='init')dInit(p,a.c);
   else if(a.t==='jplace'&&S.ph==='setup'&&p.jp){ins(p.h,p.jp,Math.max(0,Math.min(p.h.length,a.pos|0)));p.jp=null;setupChk()}
   else if(a.t==='draw'&&S.ph==='draw'&&p===c&&S.dk[a.c]&&S.dk[a.c].length){S.dr=S.dk[a.c].pop();S.dr.o=0;S.ph='guess';S.g=0}
@@ -359,16 +379,17 @@ function act(a){
   else if(a.t==='stop'&&S.ph==='guess'&&p===c&&S.g){S.pl=0;fin()}
   else if(a.t==='place'&&S.ph==='place'&&p===c){S.dr.o=S.pl;ins(c.h,S.dr,Math.max(0,Math.min(c.h.length,a.pos|0)));S.dr=null;chk(c);nxt()}
   else if(a.t==='pen'&&S.ph==='pen'&&p===c){const t=c.h[a.k];if(!t||t.o)return;t.o=1;chk(c);nxt()}
-  else if(a.t==='again'&&S.ph==='over'&&p===host){S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.out=0})}
+  else if(a.t==='again'&&S.ph==='over'&&p===host){S.ph='lobby';S.log=[];S.win=null;S.P.forEach(x=>{x.h=[];x.jp=0;x.dc=0;x.ls=Date.now();x.out=0})}
   else return;
   if(S.ph==='lobby'||S.ph==='over'){if(S.pz)unpause();S.td=0}
   bc();sched()}
 function bc(){
   if(!isHost||!S)return;
-  const pub={gid:S.gid||'',ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],pz:(S.ph==='lobby'||S.ph==='over')?null:(S.pz||null),tl:S.tl|0,lg:S.lg===0?0:1,tr:S.pz?(S.tdr!=null?S.tdr:-1):((S.td&&['draw','guess','place','pen'].includes(S.ph))?Math.max(0,S.td-Date.now()):-1),pr:S.pz?Math.max(0,(S.pzd||0)-Date.now()):0,dk:{b:S.dk.b.length,w:S.dk.w.length},
-    P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
+  presence();
+  const su=succ(),pub={hid:hostId(),ep:S.ep|0,gid:S.gid||'',ph:S.ph,t:S.t,dc:S.dr?S.dr.c:null,g:S.g,N:S.N,log:S.log,win:S.win,chat:S.chat||[],pz:(S.ph==='lobby'||S.ph==='over')?null:(S.pz||null),tl:S.tl|0,lg:S.lg===0?0:1,tr:S.pz?(S.tdr!=null?S.tdr:-1):((S.td&&['draw','guess','place','pen'].includes(S.ph))?Math.max(0,S.td-Date.now()):-1),pr:S.pz?Math.max(0,(S.pzd||0)-Date.now()):0,dk:{b:S.dk.b.length,w:S.dk.w.length},
+    P:S.P.map(p=>({id:p.id,n:p.name,bot:p.bot,out:p.out,w:(S.sc&&S.sc[p.id])|0,dc:p.dc?Math.max(0,Math.ceil((DC_GRACE-(Date.now()-p.dc))/1000)):0,h:p.h.map(t=>t.o?[t.c,t.v,1]:[t.c])}))};
   S.P.forEach(p=>{if(p.bot)return;
-    const m={to:p.id,s:(S.ph==='place'&&S.P[S.t]!==p)?Object.assign({},pub,{ph:'guess'}):pub,me:p.h.map(t=>[t.c,t.v,t.o]),jp:p.jp?1:0,dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null};
+    const m={to:p.id,s:(S.ph==='place'&&S.P[S.t]!==p)?Object.assign({},pub,{ph:'guess'}):pub,me:p.h.map(t=>[t.c,t.v,t.o]),jp:p.jp?1:0,dr:(S.P[S.t]===p&&S.dr)?[S.dr.c,S.dr.v]:null,bk:(su&&su.id===p.id&&code!=='직접')?S:null};
     if(p.id===me.id)recv(m);else if(rm)rm.emit('st',m).catch(()=>{})});
   saveSess()}
 function sched(){
@@ -393,11 +414,29 @@ function bot(){
   act({t:'guess',pid:id,i:best.i,k:best.k,v:best.cs[Math.floor(R()*best.cs.length)]})}
 
 /* ---------- client ---------- */
-function send(a){a.pid=me.id;if(isHost)act(a);else if(rm)rm.emit('act',a).catch(()=>{})}
+function promote(oldHid){
+  const st=BK;if(!st||!Array.isArray(st.P)||!st.P.some(p=>p.id===me.id)||!rm||isHost)return;
+  BK=null;S=JSON.parse(JSON.stringify(st));isHost=true;S.ep=(S.ep|0)+1;S.hid=me.id;wd=0;
+  S.P.forEach(p=>{p.ls=Date.now();p.dc=0});
+  const o=S.P.find(p=>p.id===oldHid);if(o)dropP(o);
+  try{rm.on('act',m=>act(m.data))}catch(e){}
+  clearInterval(bcT);bcT=setInterval(bc,5000);sel=null;
+  lg(me.name+'님이 방장이 됐어요');
+  bc();sched();render()}
+function demote(){
+  if(!isHost)return;isHost=false;clearInterval(bcT);clearTimeout(botT);botT=0;S=null;BK=null;C=null;joining=true;sel=null;
+  try{rm&&rm.on('st',m=>recv(m.data))}catch(e){}
+  const ping=setInterval(()=>{if(C||!joining)return clearInterval(ping);send({t:'join',name:me.name})},1500);send({t:'join',name:me.name});
+  render()}
+setInterval(()=>{try{if(!isHost&&C&&rm&&!leaving)send({t:'hb'})}catch(_){}},5000);
+setInterval(()=>{try{
+  if(isHost||!C||!C.s||leaving||joining||!BK){wd=0;return}
+  if(Date.now()-(C.at||0)>HOST_TO){if(++wd>=2)promote(C.s.hid)}else wd=0}catch(_){}},3000);
+function send(a){a.pid=me.id;if(!isHost)a.ep=(C&&C.s)?C.s.ep|0:0;if(isHost)act(a);else if(rm)rm.emit('act',a).catch(()=>{})}
 const turnMine=c=>{if(!c)return false;const s=c.s,q=s.P[s.t];return !!q&&q.id===me.id&&['draw','guess','place','pen'].includes(s.ph)};
 function yourTurn(){const b=document.createElement('div');b.className='myturn';b.textContent='내 차례!';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);
   try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(_){}BGM.ding()}
-function recv(m){if(leaving||!m||m.to!==me.id)return;if(m.bye){cleanup();render();alert('방장이 나가서 방이 닫혔어요.');return}if(m.kick){clearSess();C=null;joining=false;sel=null;render();chatUpd();alert('방장이 방에서 내보냈어요.');return}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);m.at=Date.now();C=m;saveSess();render();chatUpd();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
+function recv(m){if(leaving||!m||m.to!==me.id)return;if(m.bye){cleanup();render();alert('방장이 나가서 방이 닫혔어요.');return}if(m.kick){clearSess();C=null;joining=false;sel=null;render();chatUpd();alert('방장이 방에서 내보냈어요.');return}if(m.promote){BK=m.promote;promote(m.oldHid);return}if(!m.s||(C&&C.s&&(m.s.ep|0)<(C.s.ep|0)))return;if(m.bk){BK=m.bk;m.bk=null}if(!C||C.s.ph!==m.s.ph||C.s.t!==m.s.t)sel=null;if(m.s.ph==='setup'&&(!C||C.s.ph!=='setup'))introWant=1;const was=turnMine(C);m.at=Date.now();C=m;saveSess();render();chatUpd();if(!was&&turnMine(C))yourTurn();if(introWant){introWant=0;runIntro()}}
 let dbg='';const setDbg=t=>{dbg=t;if(joining&&!C){const e=document.querySelector('p.big + p.m');if(e)e.textContent=t}};
 const genCode=()=>Array.from({length:4},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
 const MQB=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
@@ -463,7 +502,7 @@ setInterval(()=>{
   if(S.td&&now>=S.td&&['draw','guess','place','pen'].includes(S.ph)){const c=S.P[S.t];S.td=0;if(c&&!c.bot){tmo();bc();sched()}}
 },500);
 function pzOverlay(s,P,mi){
-  const q=P.find(x=>x.id===s.pz),mine=s.pz===me.id,host=mi===0,n=q?esc(q.n):'';
+  const q=P.find(x=>x.id===s.pz),mine=s.pz===me.id,host=(s.hid||(P[0]&&P[0].id))===me.id,n=q?esc(q.n):'';
   const who=mine?'내가':n+'님이';
   return `<div class="pzo"><div class="dlg"><div class="ic">⏸</div><h2>일시정지</h2><p>${who} 게임을 멈췄어요.${mine?'':'<br>'+n+'님이 계속하면 이어져요.'}</p><div class="pill" id="pzt">⏱ ${tmTxt().p}초 후 자동으로 계속돼요</div>${mine?'<button class="pri" onclick="send({t:\'resume\'})">계속하기</button>':host?'<button class="pri" onclick="send({t:\'resume\'})">계속하기 (방장)</button>':''}<button class="lv" onclick="leave()">게임 나가기</button></div></div>`}
 let leaving=0;
@@ -477,11 +516,11 @@ function askYN(msg,yes){
 function leave(){
   if(leaving)return;
   if(!S&&!C){cleanup();render();return}
-  askYN(isHost?'방장이 나가면 방이 닫히고<br>모두 함께 나가게 돼요.':'진행 중인 게임에서 빠져나가요.',doLeave)}
+  askYN(isHost?((S&&succ()&&code!=='직접')?'방장을 다음 사람에게 넘기고<br>나가요. 게임은 계속돼요.':'방장이 나가면 방이 닫히고<br>모두 함께 나가게 돼요.'):'진행 중인 게임에서 빠져나가요.',doLeave)}
 function doLeave(){
   leaving=1;clearSess();try{if(pc){pc.close();pc=null}}catch(_){}conn=null;
   try{
-    if(isHost){if(rm&&S)S.P.forEach(p=>{if(!p.bot&&p.id!==me.id)rm.emit('st',{to:p.id,bye:1})})}
+    if(isHost){const su=S&&succ();if(su&&rm&&code!=='직접')rm.emit('st',{to:su.id,promote:S,oldHid:me.id});else if(rm&&S)S.P.forEach(p=>{if(!p.bot&&p.id!==me.id)rm.emit('st',{to:p.id,bye:1})})}
     else send({t:'leave'})
   }catch(e){}
   clearInterval(bcT);clearTimeout(botT);botT=0;
@@ -605,12 +644,12 @@ function render(){
   if(introRun){pendR=1;return}
   if(swD&&swD.mv)return;
   const a=$('#app');document.body.classList.remove('mt');document.title='다빈치 코드';if(!C){a.innerHTML=home();return}
-  const s=C.s,P=s.P,mi=P.findIndex(p=>p.id===me.id),cur=P[s.t],my=!!cur&&cur.id===me.id,ph=s.ph,host=mi===0;
+  const s=C.s,P=s.P,mi=P.findIndex(p=>p.id===me.id),cur=P[s.t],my=!!cur&&cur.id===me.id,ph=s.ph,host=(s.hid||(P[0]&&P[0].id))===me.id;
   if(ph==='lobby'){
     const cd=[...String(code)].map((ch,i)=>tl([i%2?'b':'w',ch.toUpperCase()],'',`style="--i:${i};transform:rotate(${[-4,3,-2,4,-3,2][i%6]}deg)"`)).join('');
     const seats=[0,1,2,3].map(i=>{const q=P[i];if(!q)return `<div class="seat empty"><b class="av">+</b><span>대기 중…</span></div>`;
-      const row=`<div class="seat"><b class="av">${esc([...q.n][0]||'?')}</b><span>${esc(q.n)}${q.id===me.id?' (나)':''}${[q.bot?'AI':'',i===0?'방장':''].filter(Boolean).length?`<em>${[q.bot?'AI':'',i===0?'방장':''].filter(Boolean).join(' · ')}</em>`:''}</span></div>`;
-      return host&&i>0?`<div class="sw${swOpen===q.id?' open':''}" data-id="${esc(q.id)}"><button class="del" data-id="${esc(q.id)}" onclick="send({t:'kick',id:this.dataset.id})">삭제</button>${row}</div>`:row}).join('');
+      const row=`<div class="seat"><b class="av">${esc([...q.n][0]||'?')}</b><span>${esc(q.n)}${q.id===me.id?' (나)':''}${[q.bot?'AI':'',q.id===(s.hid||P[0].id)?'방장':'',q.w?q.w+'승':''].filter(Boolean).length?`<em>${[q.bot?'AI':'',q.id===(s.hid||P[0].id)?'방장':'',q.w?q.w+'승':''].filter(Boolean).join(' · ')}</em>`:''}</span></div>`;
+      return host&&q.id!==me.id?`<div class="sw${swOpen===q.id?' open':''}" data-id="${esc(q.id)}"><button class="del" data-id="${esc(q.id)}" onclick="send({t:'kick',id:this.dataset.id})">삭제</button>${row}</div>`:row}).join('');
     a.innerHTML=`<div class="hero lb"><p>방 코드</p><div class="tiles">${cd}</div><p style="margin-top:14px">친구에게 코드를 알려주세요 · ${P.length}/4명</p></div>
     ${host?`<div class="share"><button class="s" onclick="cpRoom()">🔗 ${RM?'코드 복사':'링크 복사'}</button><button class="s kk" onclick="kkRoom()">💬 초대 공유</button></div>`:''}
     <div class="seats">${seats}</div>
@@ -619,7 +658,7 @@ function render(){
     ${host?`<div class="row lbb"><button class="s" onclick="send({t:'bot'})" ${P.length>=4?'disabled':''}>＋ AI 추가</button><button class="go2" onclick="send({t:'start'})" ${P.length<2?'disabled':''}>게임 시작</button></div>${P.length<2?'<p class="m" style="text-align:center;margin:2px 0 0">2명 이상 모이면 시작할 수 있어요</p>':P.length>1?'<p class="m" style="text-align:center;margin:2px 0 0">참가자를 왼쪽으로 밀면 내보낼 수 있어요</p>':''}`:'<p class="m" style="text-align:center">방장이 시작하길 기다리는 중…</p>'}
     <p style="text-align:center;margin:14px 0 0"><button class="lv" onclick="leave()">나가기</button></p>`;return}
   const pick=(k,t)=>ph==='pen'&&my&&!t[2]?`onclick="send({t:'pen',k:${k}})"`:'';
-  revBegin(s.gid);const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span><b class="pav${i===s.t&&!p.out?' on':''}" data-i="${esc([...p.n][0]||'?')}"><i>${esc([...p.n][0]||'?')}</i></b>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.out?'탈락':'','숨은 타일 '+p.h.filter(t=>!t[2]).length+'장'].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>{const rv=revTile(i,t);return tl(t,(sel&&sel.i===i&&sel.k===k?'sel':'')+rv.c,(my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')+' '+rv.a)}).join('')}</div></div>`).join('');
+  revBegin(s.gid);const opp=P.map((p,i)=>i===mi?'':`<div class="pl${i===s.t?' cur':''}${p.out?' out':''}"><span><b class="pav${i===s.t&&!p.out?' on':''}" data-i="${esc([...p.n][0]||'?')}"><i>${esc([...p.n][0]||'?')}</i></b>${esc(p.n)}<em${i===s.t?' class="turn"':''}>${[p.bot?'AI':'',i===s.t?'차례':'',p.dc?'연결 끊김 '+p.dc+'초':'',p.out?'탈락':'','숨은 타일 '+p.h.filter(t=>!t[2]).length+'장'].filter(Boolean).join(' · ')}</em></span><div class="hand">${p.h.map((t,k)=>{const rv=revTile(i,t);return tl(t,(sel&&sel.i===i&&sel.k===k?'sel':'')+rv.c,(my&&ph==='guess'&&!t[2]&&!p.out?`onclick="sl(${i},${k})"`:'')+' '+rv.a)}).join('')}</div></div>`).join('');
   let mine='';
   const sj=ph==='setup'&&C.jp;C.me.forEach((t,k)=>{if(sj)mine+=`<button class="sl" onclick="send({t:'jplace',pos:${k}})"></button>`;if(ph==='place'&&my)mine+=`<button class="sl" onclick="send({t:'place',pos:${k}})"></button>`;mine+=tl(t,t[2]?'':'mine',pick(k,t))});
   if(sj)mine+=`<button class="sl" onclick="send({t:'jplace',pos:${C.me.length}})"></button>`;
@@ -637,7 +676,7 @@ function render(){
     else hint='추리하는 중…'+(s.dc?' (뽑은 타일 있음)':'')}
   else if(ph==='place')hint=my?'조커를 놓을 위치를 눌러요':'추리하는 중… (뽑은 타일 있음)';
   else if(ph==='pen')hint=my?'틀렸어요 · 공개할 내 타일을 고르세요':'타일을 공개하는 중…';
-  else if(ph==='over'){const w=P.find(p=>p.id===s.win);hint=`🏆 ${w?esc(w.n):''} 승리!`;end=host?`<button onclick="send({t:'again'})">대기실로</button>`:''}
+  else if(ph==='over'){const w=P.find(p=>p.id===s.win);hint=`🏆 ${w?esc(w.n):''} 승리!`;end=host?`<button onclick="send({t:'rematch'})" ${P.length<2?'disabled':''}>한 판 더!</button> <button onclick="send({t:'again'})">대기실로</button>`:'<small>방장이 다시 시작하길 기다려요</small>'}
   const ttl=ph==='over'?'게임 종료':ph==='setup'?'시작 타일 뽑기':my?'내 차례':esc(cur.n)+'님 차례';
   {const on=turnMine(C);document.body.classList.toggle('mt',on);if(on)document.title='🔴 내 차례 · 다빈치 코드'}
   a.innerHTML=`<div class="bn${my?' me':''}">${ttl}${hint?`<small>${hint}</small>`:''}</div><div class="m">방 ${esc(code)} · 남은 타일 흑 ${s.dk.b} / 백 ${s.dk.w}</div>${opp}${pool}
@@ -645,7 +684,7 @@ function render(){
   <div class="gbar">${ph!=='over'?'<button onclick="send({t:\'pause\'})">⏸ 일시정지</button>':''}<button onclick="leave()">게임 나가기</button></div>
   ${s.lg!==0&&s.log&&s.log.length?`<div class="log"><b>최근 기록</b>${[...s.log].reverse().map((m,n)=>`<div class="lg${n?'':' new'}">${esc(m)}</div>`).join('')}</div>`:''}
   ${s.pz?pzOverlay(s,P,mi):''}
-  ${ph==='over'?`<div class="win ${s.win===me.id?'is-w':'is-l'}"><div class="trophy">${s.win===me.id?'🏆':'🌧️'}</div><div class="wl">${s.win===me.id?'WIN':'LOSE'}</div><div class="wn">${esc((P.find(p=>p.id===s.win)||{n:''}).n)} 승리!</div>${s.win===me.id?'<small>축하해요! 끝까지 살아남았어요</small>':'<small>아쉽게 졌어요… 다음엔 꼭 이겨요</small>'}${end?`<div style="margin-top:10px">${end}</div>`:''}</div>`:''}
+  ${ph==='over'?`<div class="win ${s.win===me.id?'is-w':'is-l'}"><div class="trophy">${s.win===me.id?'🏆':'🌧️'}</div><div class="wl">${s.win===me.id?'WIN':'LOSE'}</div><div class="wn">${esc((P.find(p=>p.id===s.win)||{n:''}).n)} 승리!</div><div class="sbd">${P.map(p=>`<span>${esc(p.n)} <b>${p.w|0}승</b></span>`).join('')}</div>${s.win===me.id?'<small>축하해요! 끝까지 살아남았어요</small>':'<small>아쉽게 졌어요… 다음엔 꼭 이겨요</small>'}${end?`<div style="margin-top:10px">${end}</div>`:''}</div>`:''}
   ${dock}`}
 async function cpt(t){try{await navigator.clipboard.writeText(t);return 1}catch(e){const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();let ok=0;try{ok=document.execCommand('copy')}catch(_){}x.remove();return ok}}
 async function kk(t){
@@ -781,7 +820,7 @@ async function resumeSession(){
   me.id=String(o.id);me.name=o.name||me.name;code=o.code;leaving=0;
   joining=true;render();
   if(o.host){
-    S=o.S;isHost=true;
+    S=o.S;isHost=true;S.P.forEach(p=>{p.ls=Date.now();p.dc=0});
     try{rm=RM?await RM.join('dv-'+code):await mqRoom(code,'h');rm.on('act',m=>act(m.data))}
     catch(e){cleanup();clearSess();render();alert('이전 방에 다시 연결하지 못했어요.');return}
     joining=false;clearInterval(bcT);bcT=setInterval(bc,5000);bc();sched();render();
